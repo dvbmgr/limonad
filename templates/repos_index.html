@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+	<head>
+		!(templates/head.html)
+		<title>DarcsUI :: Projects</title>
+	</head>
+	<body>
+		<header>
+			!(templates/menu.html)
+		</header>
+		<h1>Projects</h1>
+		<ul>
+			[[ repositories as repository ]](
+				<li><a href="/repo/?n={{ repository.slug }}">{{ repository.name }}</a></li>
+			)
+		</ul>
+	</body>
+</html>
