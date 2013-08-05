@@ -1,10 +1,11 @@
-module Server (runServer, Routes, Route(..), View(..), HttpReturnCode(..), ViewParam(..), URI(..), basicView, basicViewIO, readGet, readPost, slugifyString, redirectPermanently, redirectTemporary) where
+module Server (runServer, Routes, Route(..), View(..), HttpReturnCode(..), ViewParam(..), URI(..), basicView, basicViewIO, readGet, readPost, slugifyString, readFromUnicode, redirectPermanently, redirectTemporary) where
 	import Data.Time
 	import Data.Char
 	import Data.String.Utils (join, split, strip)
 	import Network.Socket
 	import Control.Monad hiding (join)
 	import Control.Concurrent
+	import Data.String.Unicode
 
 	data HttpReturnCode = HttpReturnCode Int
 		deriving (Read, Eq)
@@ -222,6 +223,9 @@ module Server (runServer, Routes, Route(..), View(..), HttpReturnCode(..), ViewP
 		else
 			'-':(slugifyString xs)
 	slugifyString _ = ""
+
+	readFromUnicode :: String -> String
+	readFromUnicode str = unicodeRemoveNoneAscii $ latin1ToUnicode str
 
 	redirectTemporary :: String -> View 
 	redirectTemporary url = View (HttpReturnCode 302) "text/html" Nothing [("Location",url)] ("Document has moved temporary <a href='"++url++"'>here</a>.")

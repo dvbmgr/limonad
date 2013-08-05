@@ -32,3 +32,6 @@ body > header > nav > ul > li {
 body > header > nav > ul > li::before {
 	content: '→ ';
 }
+body > div#wrapper {
+	padding: 10px 50px 30px 50px;
+}

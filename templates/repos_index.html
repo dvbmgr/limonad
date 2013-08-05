@@ -8,11 +8,20 @@
 		<header>
 			!(templates/menu.html)
 		</header>
-		<h1>Projects</h1>
-		<ul>
-			[[ repositories as repository ]](
-				<li><a href="/repo/?n={{ repository.slug }}">{{ repository.name }}</a></li>
-			)
-		</ul>
+		<div id="wrapper">
+			<h1>Projects</h1>
+			<table>
+					<tr>
+						<th>Name</th>
+						<th>Description</th>
+					</tr>
+					[[ repositories as repository ]](
+					<tr>
+						<td><a href="/repo/?n={{ repository.slug }}">{{ repository.name }}</a></td>
+						<td>{{ repository.desc }}</td>
+					</tr>
+					)
+			</table>
+		</div>
 	</body>
 </html>
