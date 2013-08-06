@@ -29,7 +29,7 @@ module DarcsAPI (	showTags,
 					showAge,
 					showCommitNth ) where
 	import Darcs.Repository ( readRepo, withRepositoryDirectory, RepoJob(..) )
-	import System.IO.Unsafe (unsafeDupablePerformIO)
+	import System.IO.Unsafe (unsafePerformIO)
 	import Darcs.Patch.Set
 	import Darcs.Patch.Info
 	import Darcs.Witnesses.Ordered
@@ -61,7 +61,7 @@ module DarcsAPI (	showTags,
 			return $ head (mapRL (parseTags . info) (newset2RL patches))
 		where
 			parseTags :: PatchInfo -> String
-			parseTags x = formatTime $ timeDiffToString $ (diffClockTimes (unsafeDupablePerformIO getClockTime) (toClockTime $ piDate x)) 
+			parseTags x = formatTime $ timeDiffToString $ (diffClockTimes (unsafePerformIO getClockTime) (toClockTime $ piDate x)) 
 			formatTime ftime
 					| btime <= 0 = "just now"
 					| btime <= 1 = "a second"

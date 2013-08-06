@@ -21,7 +21,7 @@
 						<tr>
 							<th>Name</th>
 							<th>Description</th>
-							<th>Author</th>
+							<th>Authors</th>
 							<th>Commits</th>
 							<th>Age</th>
 							<th>Links</th>
@@ -37,7 +37,8 @@
 							<td>{{ repository.date }}</td>
 							<td>(<a href="/readme/?n={{ repository.slug }}">readme</a>)
 								(<a href="/log/?n={{ repository.slug }}">log</a>)
-								(<a href="/tree/?n={{ repository.slug }}">tree</a>)</td>
+								(<a href="/tree/?n={{ repository.slug }}">tree</a>)
+								(<a href="/tar/?n={{ repository.slug }}">download</a>)</td>
 						</tr>
 						))
 					</tbody>

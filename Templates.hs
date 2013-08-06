@@ -36,7 +36,7 @@ module Templates (	renderString,
 	import Control.Applicative hiding (many, (<|>))
 	import System.Environment
 	import Control.Monad
-	import System.IO.Unsafe (unsafeDupablePerformIO)
+	import System.IO.Unsafe (unsafePerformIO)
 	import qualified Data.String.Utils as SUtils
 
 	type LocalVars = [(String, String)]
@@ -123,7 +123,7 @@ module Templates (	renderString,
 			error ("No variable matching ``" ++ x ++ "'' is defined")
 		where
 			matching = readLocalVars lvars x
-	showParsed (Include lvars dvars x) = "<!-- Templates' includes are DANGEROUS ! Use it at you own risks -->" ++ (unsafeDupablePerformIO $ readFile x)
+	showParsed (Include lvars dvars x) = "<!-- Templates' includes are DANGEROUS ! Use it at you own risks -->" ++ (unsafePerformIO $ readFile x)
 
 	-- Read an parse from string
 	renderString :: LocalVars -> DBVars -> String -> String

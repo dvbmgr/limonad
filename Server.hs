@@ -48,7 +48,7 @@ module Server (	runServer,
 	import Network.Socket
 	import Control.Monad hiding (join)
 	import Control.Concurrent
-	import System.IO.Unsafe (unsafeDupablePerformIO)
+	import System.IO.Unsafe (unsafePerformIO)
 	import Data.String.Unicode
 
 	data HttpReturnCode = HttpReturnCode Int
@@ -269,7 +269,7 @@ module Server (	runServer,
 	slugifyString _ = ""
 
 	unIOString :: IO String -> String 
-	unIOString = readFromUnicode . unsafeDupablePerformIO
+	unIOString = readFromUnicode . unsafePerformIO
 
 	readFromUnicode :: String -> String
 	readFromUnicode = unicodeRemoveNoneAscii . latin1ToUnicode

@@ -31,10 +31,11 @@ import System.IO
 import Server
 import Templates
 import System.Directory
-import System.IO.Unsafe (unsafeDupablePerformIO)
+import System.IO.Unsafe (unsafePerformIO)
 import Control.Monad hiding (join)
 import qualified Data.Conduit.List
 import System.Time
+import System.FilePath.Glob
 import System.Locale (defaultTimeLocale)
 
 repos_path :: String
@@ -42,6 +43,15 @@ repos_path = "./repos"
 
 rn :: String -> String 
 rn name = repos_path ++ "/" ++ name
+
+gr :: String -> String
+gr slug = if length nv == 1 then 
+				head $ nv
+			else
+				error "Not found"
+	where
+		matching b = [fst a | a <- b, snd a == slug] 
+		nv = matching $ map (\a -> (a, slugifyString a)) (unsafePerformIO $ getDirectoryContents repos_path)
 
 getDirectoryList :: ViewParam -> View
 getDirectoryList params = basicViewIO (getDirectoryContents repos_path >>= \repos -> renderFile [] [("repositories", (reps repos))] "templates/index.html")
@@ -52,10 +62,18 @@ getDirectoryList params = basicViewIO (getDirectoryContents repos_path >>= \repo
 							("desc",	unIOString $ showTags $ rn a),
 							("author",	unIOString $ showAuthor $ rn a),
 							("date",	unIOString $ showAge $ rn a),
-							("commits",	show $ unsafeDupablePerformIO $ showCommitNth $ rn a)
+							("commits",	show $ unsafePerformIO $ showCommitNth $ rn a)
 						]) . filter (\a -> ((a !! 0) /= '.'))
 
-
+getReadMe :: ViewParam -> View
+getReadMe params = 
+	if length matching > 0 then
+		renderFileToView [("readme", unsafePerformIO $ readFile $ head matching),
+						  ("slug", readGet "n" params)] [] "templates/readme.html"
+	else
+		basicView (".")
+	where
+		matching = unsafePerformIO (globDir1 (compile "README*") (repos_path ++ "/" ++ (gr $ readGet "n" params)))
 
 getCSS :: ViewParam -> View
 getCSS _ = ViewIO (HttpReturnCode 200) "text/css" Nothing [] (readFile "static/main.css")
@@ -69,6 +87,7 @@ redirectCode _ = redirectPermanently "http://github.com/davbaumgartner/DarcsUI"
 main :: IO ()
 main = runServer 8080 ([	-- Pages
 						Route "GET" "/" getDirectoryList,
+						Route "GET" "/readme/" getReadMe,
 							-- Assets
 						Route "GET" "/main.css" getCSS,
 						Route "GET" "/about" getAbout,
