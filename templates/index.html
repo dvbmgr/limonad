@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+	<head>
+		!(templates/head.html)
+		<title>DarcsUI :: Projects</title>
+	</head>
+	<body>
+		<header>
+			!(templates/menu.html)
+		</header>
+		<div id="wrapper">
+			<nav>
+				<ul id="heading">
+					<li class="current"><a href="/" class="nostyle">projects</a></li>
+					<li><a href="/about" class="nostyle">about</a></li>
+					<li><a href="/code" class="nostyle">code</a></li>
+				</ul>
+			</nav>
+			<table>
+					<thead>
+						<tr>
+							<th>Name</th>
+							<th>Description</th>
+							<th>Author</th>
+							<th>Age</th>
+							<th>Links</th>
+						</tr>
+					</thead>
+					<tbody>
+						[[ repositories as repository ]]((
+						<tr>
+							<td><a href="/repo/?n={{ repository.slug }}">{{ repository.name }}</a></td>
+							<td>{{ repository.desc }}</td>
+							<td>{{ repository.author }}</td>
+							<td>{{ repository.date }}</td>
+							<td>(<a href="/repo/?n={{ repository.slug }}">summary</a>)
+								(<a href="/log/?n={{ repository.slug }}">log</a>)
+								(<a href="/tree/?n={{ repository.slug }}">tree</a>)</td>
+						</tr>
+						))
+					</tbody>
+			</table>
+		</div>
+	</body>
+</html>

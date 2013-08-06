@@ -1,10 +1,54 @@
-module Server (runServer, Routes, Route(..), View(..), HttpReturnCode(..), ViewParam(..), URI(..), basicView, basicViewIO, readGet, readPost, slugifyString, readFromUnicode, redirectPermanently, redirectTemporary) where
+-- Copyright (c) 2013, David Baumgartner <ch.davidbaumgartner@gmail.com>
+-- 
+-- All rights reserved.
+-- Redistribution and use in source and binary forms, with or without
+-- modification, are permitted provided that the following conditions are met:
+ 
+-- * Redistributions of source code must retain the above copyright
+--   notice, this list of conditions and the following disclaimer.
+-- * Redistributions in binary form must reproduce the above copyright
+--   notice, this list of conditions and the following disclaimer in the
+--   documentation and/or other materials provided with the distribution.
+-- * Neither the name of the David Baumgartner nor the
+--   names of its contributors may be used to endorse or promote products
+--   derived from this software without specific prior written permission.
+
+-- THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND ANY
+-- EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+-- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+-- DISCLAIMED. IN NO EVENT SHALL THE REGENTS AND CONTRIBUTORS BE LIABLE FOR ANY
+-- DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+-- (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+-- LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+-- ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+-- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+-- SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+module Server (	runServer, 
+				Routes, 
+				Route(..), 
+				View(..), 
+				HttpReturnCode(..), 
+				ViewParam(..), 
+				URI(..), 
+				basicView, 
+				basicViewIO, 
+				readGet, 
+				readPost, 
+				slugifyString, 
+				readFromUnicode, 
+				redirectPermanently, 
+				redirectTemporary,
+				unIOString) where
+
 	import Data.Time
 	import Data.Char
 	import Data.String.Utils (join, split, strip)
 	import Network.Socket
 	import Control.Monad hiding (join)
 	import Control.Concurrent
+	import System.IO.Unsafe (unsafeDupablePerformIO)
 	import Data.String.Unicode
 
 	data HttpReturnCode = HttpReturnCode Int
@@ -224,8 +268,11 @@ module Server (runServer, Routes, Route(..), View(..), HttpReturnCode(..), ViewP
 			'-':(slugifyString xs)
 	slugifyString _ = ""
 
+	unIOString :: IO String -> String 
+	unIOString = readFromUnicode . unsafeDupablePerformIO
+
 	readFromUnicode :: String -> String
-	readFromUnicode str = unicodeRemoveNoneAscii $ latin1ToUnicode str
+	readFromUnicode = unicodeRemoveNoneAscii . latin1ToUnicode
 
 	redirectTemporary :: String -> View 
 	redirectTemporary url = View (HttpReturnCode 302) "text/html" Nothing [("Location",url)] ("Document has moved temporary <a href='"++url++"'>here</a>.")
