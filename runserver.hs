@@ -51,19 +51,25 @@ getDirectoryList params = basicViewIO (getDirectoryContents repos_path >>= \repo
 							("slug",	slugifyString a),
 							("desc",	unIOString $ showTags $ rn a),
 							("author",	unIOString $ showAuthor $ rn a),
-							("date",	unIOString $ showLastCommitDiff $ rn a)
+							("date",	unIOString $ showAge $ rn a),
+							("commits",	show $ unsafeDupablePerformIO $ showCommitNth $ rn a)
 						]) . filter (\a -> ((a !! 0) /= '.'))
+
+
 
 getCSS :: ViewParam -> View
 getCSS _ = ViewIO (HttpReturnCode 200) "text/css" Nothing [] (readFile "static/main.css")
 
+getAbout :: ViewParam -> View
+getAbout _ = renderFileToView [] [] "templates/about.html"
+
 redirectCode :: ViewParam -> View
 redirectCode _ = redirectPermanently "http://github.com/davbaumgartner/DarcsUI"
 
-getNewRepo :: ViewParam -> View
-getNewRepo _ = renderFileToView [] [] "new_repo.html" 
-
 main :: IO ()
-main = runServer 8080 ([Route "*" "/" getDirectoryList,
+main = runServer 8080 ([	-- Pages
+						Route "GET" "/" getDirectoryList,
+							-- Assets
 						Route "GET" "/main.css" getCSS,
+						Route "GET" "/about" getAbout,
 						Route "GET" "/code" redirectCode])

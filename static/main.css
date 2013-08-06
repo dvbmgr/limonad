@@ -42,7 +42,7 @@ body > div#wrapper > nav > ul > li.current {
 	background-color: #4e4e4e;
 	color: #fff;
 }
-body > div#wrapper > nav + table {
+body > div#wrapper > nav + table, body > div#wrapper > nav + section {
 	width: 100%;
 	padding: 10px;
 	border-top: solid 4px #4e4e4e;

@@ -25,67 +25,65 @@
 -- SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  
 module DarcsAPI (	showTags,
-					showDate,
 					showAuthor,
-					showLastCommitDiff ) where
+					showAge,
+					showCommitNth ) where
 	import Darcs.Repository ( readRepo, withRepositoryDirectory, RepoJob(..) )
 	import System.IO.Unsafe (unsafeDupablePerformIO)
-	import Darcs.Patch.Set ( tags )
+	import Darcs.Patch.Set
 	import Darcs.Patch.Info
+	import Darcs.Witnesses.Ordered
 	import System.Time
 	import System.Locale
-	import Data.String.Utils (split)
+	import Darcs.Patch.PatchInfoAnd
+	import Data.String.Utils (split, join)
+	import Data.List
+
+	rmNothing :: [Maybe String] -> [String] -> [String]
+	rmNothing [] xs = xs
+	rmNothing xp@(x:xs) out = case x of
+		Just f ->
+			rmNothing xs (f:out)
+		Nothing ->
+			rmNothing xs out
 
 	showTags :: String -> IO String
 	showTags repository =
 		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
 			patches <- readRepo repository
-			return $ head (map parseTags (tags patches))
-		where
-			parseTags :: PatchInfo -> String
-			parseTags x = case piTag x of
-					Just tag ->
-						tag
-					Nothing ->
-						"There's no tag for this repository" 
+			return $ join ", " (nub $ rmNothing (mapRL (piTag . info) (newset2RL patches)) [])
 
-	showDate :: String -> IO CalendarTime
-	showDate repository =
+
+	showAge :: String -> IO String
+	showAge repository = 
 		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
 			patches <- readRepo repository
-			return $ head (map parseTags (tags patches))
-		where
-			parseTags :: PatchInfo -> CalendarTime
-			parseTags x = piDate x
-
-	showLastCommitDiff :: String -> IO String
-	showLastCommitDiff repository = 
-		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
-			patches <- readRepo repository
-			return $ last (map parseTags (tags patches))
+			return $ head (mapRL (parseTags . info) (newset2RL patches))
 		where
 			parseTags :: PatchInfo -> String
 			parseTags x = formatTime $ timeDiffToString $ (diffClockTimes (unsafeDupablePerformIO getClockTime) (toClockTime $ piDate x)) 
 			formatTime ftime
-					| btime <= 0 = "just now"
+					| btime <= 0 = "just now"
 					| btime <= 1 = "a second"
 					| btime <= 59 = (show $ round btime) ++ " seconds"
-					| btime <= 119 = "a minute"
+					| btime <= 119 = "a minute"
 					| btime <= 3540 = (show $ round (btime/60)) ++ " minutes"
 					| btime <= 7100 = "an hour"
-					| btime <= 82800 = (show $ round ((btime+99)/3600)) ++ " hours"
-					| btime <= 172000 = "a day"
+					| btime <= 82800 = (show $ round ((btime+99)/3600)) ++ " hours"
+					| btime <= 172000 = "a day"
 					| btime <= 518400 = (show $ round ((btime+800)/(60*60*24))) ++ " days"
 					| btime <= 1036800 = "a week"
 					| otherwise = (show $ round ((btime+180000)/(60*60*24*7))) ++ " weeks"
 				where 
 					btime = read (head (split " " ftime)) :: Float
 
+	showCommitNth :: String -> IO Int 
+	showCommitNth repository = 
+		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
+			readRepo repository >>= (return . lengthRL . newset2RL)
+
 	showAuthor :: String -> IO String
 	showAuthor repository =
 		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
 			patches <- readRepo repository
-			return $ last (map parseTags (tags patches))
-		where
-			parseTags :: PatchInfo -> String
-			parseTags x = piAuthor x
+			return $ join ", " (nub (mapRL (piAuthor . info) (newset2RL patches)))

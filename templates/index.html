@@ -22,6 +22,7 @@
 							<th>Name</th>
 							<th>Description</th>
 							<th>Author</th>
+							<th>Commits</th>
 							<th>Age</th>
 							<th>Links</th>
 						</tr>
@@ -32,8 +33,9 @@
 							<td><a href="/repo/?n={{ repository.slug }}">{{ repository.name }}</a></td>
 							<td>{{ repository.desc }}</td>
 							<td>{{ repository.author }}</td>
+							<td>{{ repository.commits }}</td>
 							<td>{{ repository.date }}</td>
-							<td>(<a href="/repo/?n={{ repository.slug }}">summary</a>)
+							<td>(<a href="/readme/?n={{ repository.slug }}">readme</a>)
 								(<a href="/log/?n={{ repository.slug }}">log</a>)
 								(<a href="/tree/?n={{ repository.slug }}">tree</a>)</td>
 						</tr>

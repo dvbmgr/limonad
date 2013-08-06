@@ -1,4 +1,4 @@
-pristine:04721c29d669aca74653c7c744337175ac0a221349e3741facc123b293b2a073
+pristine:0e5f05ef276eb138334b4598c80c102022da6ade8bc513f48d00b85bb315c8d7
 Starting with inventory:
 0000000319-56da7c79f4ecfccd29c9a6e71a188841d042951d9bb8065d7983bab54ef4f1b8
 [TAG This is a Â«Â hello world Â»
@@ -16,3 +16,8 @@ _davidbaumgartner@bluewin.ch**20130806180959
  Ignore-this: b2b2d7c3bf73482e7cc240b787c6cd4
 ] 
 hash: 0000000141-df62981f01a465ee7b45b997e573a0ae542a537459e23f609fedf09348f05b87
+[Adding Goodbye
+_davidbaumgartner@bluewin.ch**20130806195637
+ Ignore-this: 2e9a02995d02fdbb932ace1a86e73f32
+] 
+hash: 0000000208-f310f2fdd9e94f20751dbab1c58c36d7d47f37301a73be23fdd642a36f0fb827
