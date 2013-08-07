@@ -37,13 +37,25 @@ import qualified Data.Conduit.List
 import System.Time
 import System.FilePath.Glob
 import System.Locale (defaultTimeLocale)
+import qualified Codec.Archive.Tar as Tar
+import qualified Data.UUID.V4 as UUID4
+import qualified Data.UUID as UUID 
 
+-------------------------
+-- Configuration       --
+-------------------------
+-- Repository path
 repos_path :: String
 repos_path = "./repos"
 
+-------------------------
+-- Helpers             --
+-------------------------
+-- Get computed name
 rn :: String -> String 
 rn name = repos_path ++ "/" ++ name
 
+-- Slug -> Path
 gr :: String -> String
 gr slug = if length nv == 1 then 
 				head $ nv
@@ -53,6 +65,9 @@ gr slug = if length nv == 1 then
 		matching b = [fst a | a <- b, snd a == slug] 
 		nv = matching $ map (\a -> (a, slugifyString a)) (unsafePerformIO $ getDirectoryContents repos_path)
 
+-------------------------
+-- Pages               --
+-------------------------
 getDirectoryList :: ViewParam -> View
 getDirectoryList params = basicViewIO (getDirectoryContents repos_path >>= \repos -> renderFile [] [("repositories", (reps repos))] "templates/index.html")
 	where
@@ -71,10 +86,24 @@ getReadMe params =
 		renderFileToView [("readme", unsafePerformIO $ readFile $ head matching),
 						  ("slug", readGet "n" params)] [] "templates/readme.html"
 	else
-		basicView (".")
+		renderFileToView [("This repository has no README. Create it in the root directory to be displayed here.", unsafePerformIO $ readFile $ head matching),
+						  ("slug", readGet "n" params)] [] "templates/readme.html"
 	where
 		matching = unsafePerformIO (globDir1 (compile "README*") (repos_path ++ "/" ++ (gr $ readGet "n" params)))
 
+mkTarBall :: String -> IO String 
+mkTarBall path = do 
+	name <- UUID4.nextRandom
+	directory_contents <- getDirectoryContents path
+	Tar.create (UUID.toString name ++ ".tar") path $ filter (\a -> ((a !! 0) /= '.')) directory_contents
+	return $ UUID.toString name ++ ".tar"
+
+getTarBall :: ViewParam -> View
+getTarBall params = ViewIO (HttpReturnCode 200) "application/x-tar" Nothing [] (mkTarBall (rn $ gr $ readGet "n" params) >>= readFile)
+
+-------------------------
+-- Assets              --
+-------------------------
 getCSS :: ViewParam -> View
 getCSS _ = ViewIO (HttpReturnCode 200) "text/css" Nothing [] (readFile "static/main.css")
 
@@ -84,10 +113,16 @@ getAbout _ = renderFileToView [] [] "templates/about.html"
 redirectCode :: ViewParam -> View
 redirectCode _ = redirectPermanently "http://github.com/davbaumgartner/DarcsUI"
 
+
+-------------------------
+-- Server              --
+-------------------------
 main :: IO ()
 main = runServer 8080 ([	-- Pages
 						Route "GET" "/" getDirectoryList,
 						Route "GET" "/readme/" getReadMe,
+
+						Route "GET" "/tar/" getTarBall,
 							-- Assets
 						Route "GET" "/main.css" getCSS,
 						Route "GET" "/about" getAbout,
