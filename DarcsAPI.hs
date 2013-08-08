@@ -27,7 +27,9 @@
 module DarcsAPI (	showTags,
 					showAuthor,
 					showAge,
-					showCommitNth ) where
+					showCommitNth,
+					getChanges,
+					mkTarBall ) where
 	import Darcs.Repository ( readRepo, withRepositoryDirectory, RepoJob(..) )
 	import System.IO.Unsafe (unsafePerformIO)
 	import Darcs.Patch.Set
@@ -35,9 +37,11 @@ module DarcsAPI (	showTags,
 	import Darcs.Witnesses.Ordered
 	import System.Time
 	import System.Locale
+	import System.Directory
 	import Darcs.Patch.PatchInfoAnd
 	import Data.String.Utils (split, join)
 	import Data.List
+	import qualified Codec.Archive.Tar as Tar
 
 	rmNothing :: [Maybe String] -> [String] -> [String]
 	rmNothing [] xs = xs
@@ -53,6 +57,20 @@ module DarcsAPI (	showTags,
 			patches <- readRepo repository
 			return $ join ", " (nub $ rmNothing (mapRL (piTag . info) (newset2RL patches)) [])
 
+	formatTime ftime
+			| btime <= 0 = "just now"
+			| btime <= 1 = "a second"
+			| btime <= 59 = (show $ round btime) ++ " seconds"
+			| btime <= 119 = "a minute"
+			| btime <= 3540 = (show $ round (btime/60)) ++ " minutes"
+			| btime <= 7100 = "an hour"
+			| btime <= 82800 = (show $ round ((btime+99)/3600)) ++ " hours"
+			| btime <= 172000 = "a day"
+			| btime <= 518400 = (show $ round ((btime+800)/(60*60*24))) ++ " days"
+			| btime <= 1036800 = "a week"
+			| otherwise = (show $ round ((btime+180000)/(60*60*24*7))) ++ " weeks"
+		where 
+			btime = read (head (split " " ftime)) :: Float
 
 	showAge :: String -> IO String
 	showAge repository = 
@@ -62,20 +80,6 @@ module DarcsAPI (	showTags,
 		where
 			parseTags :: PatchInfo -> String
 			parseTags x = formatTime $ timeDiffToString $ (diffClockTimes (unsafePerformIO getClockTime) (toClockTime $ piDate x)) 
-			formatTime ftime
-					| btime <= 0 = "just now"
-					| btime <= 1 = "a second"
-					| btime <= 59 = (show $ round btime) ++ " seconds"
-					| btime <= 119 = "a minute"
-					| btime <= 3540 = (show $ round (btime/60)) ++ " minutes"
-					| btime <= 7100 = "an hour"
-					| btime <= 82800 = (show $ round ((btime+99)/3600)) ++ " hours"
-					| btime <= 172000 = "a day"
-					| btime <= 518400 = (show $ round ((btime+800)/(60*60*24))) ++ " days"
-					| btime <= 1036800 = "a week"
-					| otherwise = (show $ round ((btime+180000)/(60*60*24*7))) ++ " weeks"
-				where 
-					btime = read (head (split " " ftime)) :: Float
 
 	showCommitNth :: String -> IO Int 
 	showCommitNth repository = 
@@ -87,3 +91,37 @@ module DarcsAPI (	showTags,
 		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
 			patches <- readRepo repository
 			return $ join ", " (nub (mapRL (piAuthor . info) (newset2RL patches)))
+
+
+	getChanges :: String -> IO [(Int, String, String, String, String, String, String, String)]
+	getChanges repository = 
+		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
+			patches <- readRepo repository
+			return $ addCommitId $ mapRL (mkInfo . info) (newset2RL patches)
+		where
+			mkInfo :: PatchInfo -> (String, String, String, String, String, String, String)
+			mkInfo infos = (makeAltFilename infos,
+								piName infos, 
+								piAuthor infos, 
+								(formatCalendarTime defaultTimeLocale "%c" $ piDate infos) ++ " (" ++ (formatTime $ timeDiffToString $ (diffClockTimes (unsafePerformIO getClockTime) (toClockTime $ piDate infos))) ++ " ago)",
+								join ", " $ piLog infos,
+								"",
+								""
+								)
+
+	addCommitId :: Int -> [(String, String, String, String, String, String, String)] -> [(Int, String, String, String, String, String, String, String)] -> [(Int, String, String, String, String, String, String, String)]
+	addCommitId _ [] out		= out
+	addCommitId x ep@(e:es) out	= addCommitId (e+1) es ((x, String, String, String, String, String, String, String):out)
+
+	{- TODO -}
+	mkTarBall :: String -> String -> IO String 
+	mkTarBall repo_path path = (doesFileExist tpath) >>= \exists ->
+						if exists then do
+							directory_contents <- getDirectoryContents (repo_path ++ "/" ++ path)
+							Tar.create tpath (repo_path ++ "/" ++ path) $ filter (\a -> ((a !! 0) /= '.')) directory_contents
+							return tpath
+						else 
+							return tpath
+			where
+				tpath = path ++ ".tar"
+	{- /TODO -}

@@ -1,7 +1,7 @@
-DarcsUI
+limonad
 =======
 
-DarcsUI is a web interface for Darcs
+limonad is a web interface for Darcs
 
 License
 =======

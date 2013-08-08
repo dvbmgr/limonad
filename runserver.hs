@@ -37,9 +37,6 @@ import qualified Data.Conduit.List
 import System.Time
 import System.FilePath.Glob
 import System.Locale (defaultTimeLocale)
-import qualified Codec.Archive.Tar as Tar
-import qualified Data.UUID.V4 as UUID4
-import qualified Data.UUID as UUID 
 
 -------------------------
 -- Configuration       --
@@ -89,17 +86,23 @@ getReadMe params =
 		renderFileToView [("This repository has no README. Create it in the root directory to be displayed here.", unsafePerformIO $ readFile $ head matching),
 						  ("slug", readGet "n" params)] [] "templates/readme.html"
 	where
-		matching = unsafePerformIO (globDir1 (compile "README*") (repos_path ++ "/" ++ (gr $ readGet "n" params)))
+		matching = unsafePerformIO (globDir1 (compile "README*") (rn (gr $ readGet "n" params)))
 
-mkTarBall :: String -> IO String 
-mkTarBall path = do 
-	name <- UUID4.nextRandom
-	directory_contents <- getDirectoryContents path
-	Tar.create (UUID.toString name ++ ".tar") path $ filter (\a -> ((a !! 0) /= '.')) directory_contents
-	return $ UUID.toString name ++ ".tar"
 
+getLog :: ViewParam -> View
+getLog params = renderFileToView [("slug", 
+									readGet "n" params)
+								] [("commits", 
+									(map (toParams) (unsafePerformIO $ getChanges (rn $ gr $ readGet "n" params)))
+								)] "templates/log.html"
+	where
+		toParams :: (Int, String, String, String, String, String, String, String) -> [(String, String)]
+		toParams (cname, message, author, date, log_, files, lines_) = [("cname", cname), ("message", message), ("author", author), ("date", date), ("log", log_), ("files", files), ("lines", lines_)] 
+
+{- TODO -}
 getTarBall :: ViewParam -> View
-getTarBall params = ViewIO (HttpReturnCode 200) "application/x-tar" Nothing [] (mkTarBall (rn $ gr $ readGet "n" params) >>= readFile)
+getTarBall params = ViewIO (HttpReturnCode 200) "application/x-tar" Nothing [] (mkTarBall repos_path (gr $ readGet "n" params) >>= readFile)
+{- /TODO -}
 
 -------------------------
 -- Assets              --
@@ -121,7 +124,7 @@ main :: IO ()
 main = runServer 8080 ([	-- Pages
 						Route "GET" "/" getDirectoryList,
 						Route "GET" "/readme/" getReadMe,
-
+						Route "GET" "/log/" getLog,
 						Route "GET" "/tar/" getTarBall,
 							-- Assets
 						Route "GET" "/main.css" getCSS,
