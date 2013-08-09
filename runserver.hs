@@ -96,7 +96,7 @@ getLog params = renderFileToView [("slug",
 									(map (toParams) (unsafePerformIO $ getChanges (rn $ gr $ readGet "n" params)))
 								)] "templates/log.html"
 	where
-		toParams :: (Int, String, String, String, String, String, String, String) -> [(String, String)]
+		toParams :: (String, String, String, String, String, String, String, String) -> [(String, String)]
 		toParams (cname, message, author, date, log_, files, lines_) = [("cname", cname), ("message", message), ("author", author), ("date", date), ("log", log_), ("files", files), ("lines", lines_)] 
 
 {- TODO -}

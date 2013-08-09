@@ -76,10 +76,10 @@ module DarcsAPI (	showTags,
 	showAge repository = 
 		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
 			patches <- readRepo repository
-			return $ head (mapRL (parseTags . info) (newset2RL patches))
+			getClockTime >>= \clock -> return $ head (mapRL (parseTags clock . info) (newset2RL patches))
 		where
-			parseTags :: PatchInfo -> String
-			parseTags x = formatTime $ timeDiffToString $ (diffClockTimes (unsafePerformIO getClockTime) (toClockTime $ piDate x)) 
+			parseTags :: ClockTime -> PatchInfo -> String
+			parseTags clock x = formatTime $ timeDiffToString $ (diffClockTimes clock (toClockTime $ piDate x)) 
 
 	showCommitNth :: String -> IO Int 
 	showCommitNth repository = 
@@ -93,25 +93,25 @@ module DarcsAPI (	showTags,
 			return $ join ", " (nub (mapRL (piAuthor . info) (newset2RL patches)))
 
 
-	getChanges :: String -> IO [(Int, String, String, String, String, String, String, String)]
+	getChanges :: String -> IO [(String, String, String, String, String, String, String, String)]
 	getChanges repository = 
 		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
 			patches <- readRepo repository
-			return $ addCommitId $ mapRL (mkInfo . info) (newset2RL patches)
+			getClockTime >>= \clock -> addCommitId 0 (mapRL (mkInfo clock . info) (newset2RL patches)) []
 		where
-			mkInfo :: PatchInfo -> (String, String, String, String, String, String, String)
-			mkInfo infos = (makeAltFilename infos,
+			mkInfo :: ClockTime -> PatchInfo -> (String, String, String, String, String, String, String)
+			mkInfo clock infos = (makeAltFilename infos,
 								piName infos, 
 								piAuthor infos, 
-								(formatCalendarTime defaultTimeLocale "%c" $ piDate infos) ++ " (" ++ (formatTime $ timeDiffToString $ (diffClockTimes (unsafePerformIO getClockTime) (toClockTime $ piDate infos))) ++ " ago)",
+								(formatCalendarTime defaultTimeLocale "%c" $ piDate infos) ++ " (" ++ (formatTime $ timeDiffToString $ (diffClockTimes clock (toClockTime $ piDate infos))) ++ " ago)",
 								join ", " $ piLog infos,
 								"",
 								""
 								)
 
-	addCommitId :: Int -> [(String, String, String, String, String, String, String)] -> [(Int, String, String, String, String, String, String, String)] -> [(Int, String, String, String, String, String, String, String)]
+	addCommitId :: Int -> [(String, String, String, String, String, String, String)] -> [(String, String, String, String, String, String, String, String)] -> [(String, String, String, String, String, String, String, String)]
 	addCommitId _ [] out		= out
-	addCommitId x ep@(e:es) out	= addCommitId (e+1) es ((x, String, String, String, String, String, String, String):out)
+	addCommitId x ep@((a1, a2, a3, a4, a5, a6, a7):es) out	= addCommitId (x+1) es ((show x, a1, a2, a3, a4, a5, a6, a7):out)
 
 	{- TODO -}
 	mkTarBall :: String -> String -> IO String 
