@@ -93,11 +93,11 @@ getLog :: ViewParam -> View
 getLog params = renderFileToView [("slug", 
 									readGet "n" params)
 								] [("commits", 
-									(map (toParams) (unsafePerformIO $ getChanges (rn $ gr $ readGet "n" params)))
+									(map (toParams) $ reverse (unsafePerformIO $ getChanges (rn $ gr $ readGet "n" params)))
 								)] "templates/log.html"
 	where
 		toParams :: (String, String, String, String, String, String, String, String) -> [(String, String)]
-		toParams (cname, message, author, date, log_, files, lines_) = [("cname", cname), ("message", message), ("author", author), ("date", date), ("log", log_), ("files", files), ("lines", lines_)] 
+		toParams (id_, cname, message, author, date, log_, files, lines_) = [("id",id_),("cname", cname), ("message", message), ("author", author), ("date", date), ("log", log_), ("files", files), ("lines", lines_)] 
 
 {- TODO -}
 getTarBall :: ViewParam -> View

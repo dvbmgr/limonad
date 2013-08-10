@@ -31,7 +31,6 @@ module DarcsAPI (	showTags,
 					getChanges,
 					mkTarBall ) where
 	import Darcs.Repository ( readRepo, withRepositoryDirectory, RepoJob(..) )
-	import System.IO.Unsafe (unsafePerformIO)
 	import Darcs.Patch.Set
 	import Darcs.Patch.Info
 	import Darcs.Witnesses.Ordered
@@ -97,7 +96,7 @@ module DarcsAPI (	showTags,
 	getChanges repository = 
 		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
 			patches <- readRepo repository
-			getClockTime >>= \clock -> addCommitId 0 (mapRL (mkInfo clock . info) (newset2RL patches)) []
+			(getClockTime >>= \clock -> return $ addCommitId 1 (mapRL (mkInfo clock . info) (newset2RL patches)) [])
 		where
 			mkInfo :: ClockTime -> PatchInfo -> (String, String, String, String, String, String, String)
 			mkInfo clock infos = (makeAltFilename infos,
@@ -110,8 +109,8 @@ module DarcsAPI (	showTags,
 								)
 
 	addCommitId :: Int -> [(String, String, String, String, String, String, String)] -> [(String, String, String, String, String, String, String, String)] -> [(String, String, String, String, String, String, String, String)]
-	addCommitId _ [] out		= out
-	addCommitId x ep@((a1, a2, a3, a4, a5, a6, a7):es) out	= addCommitId (x+1) es ((show x, a1, a2, a3, a4, a5, a6, a7):out)
+	addCommitId _ [] out = out
+	addCommitId x ((a1, a2, a3, a4, a5, a6, a7):es) out = addCommitId (x+1) es ((show x, a1, a2, a3, a4, a5, a6, a7):out)
 
 	{- TODO -}
 	mkTarBall :: String -> String -> IO String 
