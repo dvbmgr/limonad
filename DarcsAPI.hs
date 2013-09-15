@@ -30,6 +30,7 @@ module DarcsAPI (	showTags,
 					showCommitNth,
 					getChanges,
 					mkTarBall ) where
+	import Prelude hiding (catch)
 	import Darcs.Repository ( readRepo, withRepositoryDirectory, RepoJob(..) )
 	import Darcs.Patch.Set
 	import Darcs.Patch.Info
@@ -41,6 +42,16 @@ module DarcsAPI (	showTags,
 	import Data.String.Utils (split, join)
 	import Data.List
 	import qualified Codec.Archive.Tar as Tar
+	import System.Directory
+	import Control.Exception
+	import System.IO.Error hiding (catch)
+
+	removeFileIfExists :: FilePath -> IO ()
+	removeFileIfExists fileName = 
+		removeFile fileName `catch` handleExists
+		where handleExists e
+	        | isDoesNotExistError e = return ()
+	        | otherwise = throwIO e
 
 	rmNothing :: [Maybe String] -> [String] -> [String]
 	rmNothing [] xs = xs
@@ -96,31 +107,33 @@ module DarcsAPI (	showTags,
 	getChanges repository = 
 		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
 			patches <- readRepo repository
-			(getClockTime >>= \clock -> return $ addCommitId 1 (mapRL (mkInfo clock . info) (newset2RL patches)) [])
+			clock <- getClockTime
+			let commits = (mapRL (mkInfo clock . info) (newset2RL patches))
+			return $ map addDiff $ addCommitId (length commits) commits []
 		where
-			mkInfo :: ClockTime -> PatchInfo -> (String, String, String, String, String, String, String)
+			mkInfo :: ClockTime -> PatchInfo -> (String, String, String, String, String)
 			mkInfo clock infos = (makeAltFilename infos,
 								piName infos, 
 								piAuthor infos, 
 								(formatCalendarTime defaultTimeLocale "%c" $ piDate infos) ++ " (" ++ (formatTime $ timeDiffToString $ (diffClockTimes clock (toClockTime $ piDate infos))) ++ " ago)",
-								join ", " $ piLog infos,
-								"",
-								""
-								)
+								join ", " $ piLog infos)
 
-	addCommitId :: Int -> [(String, String, String, String, String, String, String)] -> [(String, String, String, String, String, String, String, String)] -> [(String, String, String, String, String, String, String, String)]
+	addCommitId :: Int -> [(String, String, String, String, String)] -> [(String, String, String, String, String, String)] -> [(String, String, String, String, String, String)]
 	addCommitId _ [] out = out
-	addCommitId x ((a1, a2, a3, a4, a5, a6, a7):es) out = addCommitId (x+1) es ((show x, a1, a2, a3, a4, a5, a6, a7):out)
+	addCommitId x ((a1, a2, a3, a4, a5):es) out = 
+		addCommitId (x-1) es ((show x, a1, a2, a3, a4, a5):out)
+
+	addDiff :: (String, String, String, String, String, String) -> (String, String, String, String, String, String, String, String)
+	addDiff (a1, a2, a3, a4, a5, a6) = 
+		(a1, a2, a3, a4, a5, a6, "-", "-")
 
 	{- TODO -}
 	mkTarBall :: String -> String -> IO String 
-	mkTarBall repo_path path = (doesFileExist tpath) >>= \exists ->
-						if exists then do
-							directory_contents <- getDirectoryContents (repo_path ++ "/" ++ path)
-							Tar.create tpath (repo_path ++ "/" ++ path) $ filter (\a -> ((a !! 0) /= '.')) directory_contents
-							return tpath
-						else 
-							return tpath
+	mkTarBall repo_path path = do
+					removeFileIfExists tpath
+					directory_contents <- getDirectoryContents (repo_path ++ "/" ++ path)
+					Tar.create tpath (repo_path ++ "/" ++ path) $ filter (\a -> ((a !! 0) /= '.')) directory_contents
+					return tpath
 			where
 				tpath = path ++ ".tar"
 	{- /TODO -}

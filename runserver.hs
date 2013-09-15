@@ -37,6 +37,7 @@ import qualified Data.Conduit.List
 import System.Time
 import System.FilePath.Glob
 import System.Locale (defaultTimeLocale)
+import Data.Functor ((<$>))
 
 -------------------------
 -- Configuration       --
@@ -78,16 +79,10 @@ getDirectoryList params = basicViewIO (getDirectoryContents repos_path >>= \repo
 						]) . filter (\a -> ((a !! 0) /= '.'))
 
 getReadMe :: ViewParam -> View
-getReadMe params = 
-	if length matching > 0 then
-		renderFileToView [("readme", unsafePerformIO $ readFile $ head matching),
-						  ("slug", readGet "n" params)] [] "templates/readme.html"
-	else
-		renderFileToView [("This repository has no README. Create it in the root directory to be displayed here.", unsafePerformIO $ readFile $ head matching),
-						  ("slug", readGet "n" params)] [] "templates/readme.html"
+getReadMe params = renderFileToView [("readme", if length matching > 0 then unsafePerformIO $ (readFile $ head matching) else "This repository has no README. Create it in the root directory to be displayed here."),
+								  		("slug", readGet "n" params)] [] "templates/readme.html"
 	where
-		matching = unsafePerformIO (globDir1 (compile "README*") (rn (gr $ readGet "n" params)))
-
+		matching = unsafePerformIO $ (globDir1 (compile "README*") (rn (gr $ readGet "n" params)))
 
 getLog :: ViewParam -> View
 getLog params = renderFileToView [("slug", 
@@ -98,6 +93,10 @@ getLog params = renderFileToView [("slug",
 	where
 		toParams :: (String, String, String, String, String, String, String, String) -> [(String, String)]
 		toParams (id_, cname, message, author, date, log_, files, lines_) = [("id",id_),("cname", cname), ("message", message), ("author", author), ("date", date), ("log", log_), ("files", files), ("lines", lines_)] 
+
+
+getCommit :: ViewParam -> View
+getCommit params = basicView ""
 
 {- TODO -}
 getTarBall :: ViewParam -> View
@@ -125,6 +124,7 @@ main = runServer 8080 ([	-- Pages
 						Route "GET" "/" getDirectoryList,
 						Route "GET" "/readme/" getReadMe,
 						Route "GET" "/log/" getLog,
+						Route "GET" "/commit/" getCommit,
 						Route "GET" "/tar/" getTarBall,
 							-- Assets
 						Route "GET" "/main.css" getCSS,
