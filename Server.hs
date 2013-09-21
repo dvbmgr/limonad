@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -XUndecidableInstances #-}
 -- Copyright (c) 2013, David Baumgartner <ch.davidbaumgartner@gmail.com>
 -- 
 -- All rights reserved.
@@ -34,6 +35,7 @@ module Server (	runServer,
 				URI(..), 
 				basicView, 
 				basicViewIO, 
+				basicViewIOBS,
 				readGet, 
 				readPost, 
 				slugifyString, 
@@ -42,14 +44,17 @@ module Server (	runServer,
 				redirectTemporary,
 				unIOString) where
 
+	import qualified Data.ByteString.Lazy as BS
 	import Data.Time
 	import Data.Char
 	import Data.String.Utils (join, split, strip)
 	import Network.Socket
+	import qualified Network.Socket.ByteString.Lazy as SBS
 	import Control.Monad hiding (join)
 	import Control.Concurrent
 	import System.IO.Unsafe (unsafePerformIO)
 	import Data.String.Unicode
+	import System.Directory
 
 	data HttpReturnCode = HttpReturnCode Int
 		deriving (Read, Eq)
@@ -90,6 +95,18 @@ module Server (	runServer,
 			viewExpires :: Maybe String,
 			viewAdditionnalHeaders :: [(String,String)],
 			viewContent :: String
+		} | ViewIOBS {
+			viewIOBSReturnCode :: HttpReturnCode,
+			viewIOBSContentType :: String,
+			viewIOBSExpires :: Maybe String,
+			viewIOBSAdditionnalHeaders :: [(String,String)],
+			viewIOBSContent :: IO BS.ByteString
+		} | ViewBS {
+			viewBSReturnCode :: HttpReturnCode,
+			viewBSContentType :: String,
+			viewBSExpires :: Maybe String,
+			viewBSAdditionnalHeaders :: [(String,String)],
+			viewBSContent :: BS.ByteString
 		}
 
 	data Route = Route {
@@ -153,7 +170,8 @@ module Server (	runServer,
 		show _ = show (HttpReturnCode 500)
 
 	to_tuple :: [a] -> (a,a)
-	to_tuple (b:c:_) = (b,c)
+	to_tuple (a:b:_) = (a,b)
+	to_tuple _		 = error "Unvalid list" 
 
 	runServer :: PortNumber -> Routes -> IO ()
 	runServer port routes = do
@@ -166,21 +184,34 @@ module Server (	runServer,
 
 	loopServer :: Routes -> Socket -> IO ()
 	loopServer routes sock = do
-		accept sock >>= \conn -> forkIO (handleRequest routes conn)
+		_ <- (accept sock >>= \conn -> forkIO (handleRequest routes conn))
 		loopServer routes sock
 
 	handleRequest :: Routes -> (Socket, SockAddr) -> IO ()
 	handleRequest routes (sock, addr) = do
 		datas <- recv sock 4096
-		let http = parseHttp datas
-		let view = handleHttp routes http
-		putStrLn ("["++(show addr)++"] " ++ (uriPath $ paramUri http))
+		let params = parseHttp datas
+		let view = handleHttp routes params
+		putStrLn ("["++(show addr)++"] " ++ (uriPath $ paramUri params))
 		sendSock sock view
 		sClose sock
 
-	sendSock :: Socket -> View -> IO Int
-	sendSock sock (ViewIO returncode contenttype expires additionnalheaders content) = liftM (viewToResponse returncode contenttype expires additionnalheaders) content >>= send sock
-	sendSock sock (View returncode contenttype expires additionnalheaders content) = send sock (viewToResponse returncode contenttype expires additionnalheaders content)
+	{- 
+		Do NOT try to handle exceptions.
+
+		hours spent on this: 1.5
+	-}
+	sendSock :: Socket -> View -> IO ()
+	sendSock sock (ViewIO returncode contenttype expires additionnalheaders content) = 
+		void $ (liftM (viewToResponse returncode contenttype expires additionnalheaders) content) >>= send sock
+	sendSock sock (View returncode contenttype expires additionnalheaders content) = 
+		void $ send sock (viewToResponse returncode contenttype expires additionnalheaders content)
+	sendSock sock (ViewIOBS returncode contenttype expires additionnalheaders content) = do
+		_ <- send sock (mkResponse returncode contenttype expires additionnalheaders)
+		void $ content >>= SBS.send sock
+	sendSock sock (ViewBS returncode contenttype expires additionnalheaders content) = do
+		_ <- send sock (mkResponse returncode contenttype expires additionnalheaders)
+		void $ SBS.send sock content
 
 	parseHttp :: String -> ViewParam
 	parseHttp request = (ViewParam method (URI "http" Nothing ([split ":" (snd x) !! 0 | x <- httpparams, fst x == "Host"] !! 0) port onlypath getparams fragement) postparams)
@@ -229,19 +260,54 @@ module Server (	runServer,
 			if length matching == 1 then
 				(matching !! 0) params
 			else
-				if length e4040 == 1 then
-					(e4040 !! 0) params
+				if length matching > 1 then
+					error500 routes params
 				else
-					(View (HttpReturnCode 500) "text/html" Nothing [] "<h1>Internal Server Error</h1>")
+					error404 routes params
 		where 
 			matching = [routeFunct route|route <- routes, routePath route == (uriPath (paramUri params)), (routeMethod route == paramMethod params) || (routeMethod route == "*")]
-			e4040 = [routeFunct route|route <- routes, routePath route == "/404"]
+	
+	error404 :: [Route] -> ViewParam -> View
+	error404 routes params =
+		if length e4 == 1 then (e4 !! 0) params else basic404
+		where
+			e4 = [routeFunct route|route <- routes, routePath route == "/404"]
+
+	error500 :: [Route] -> ViewParam -> View
+	error500 routes params =
+		if length e5 == 1 then (e5 !! 0) params else basic500 
+		where
+			e5 = [routeFunct route|route <- routes, routePath route == "/500"]
+
+	basic404content :: String 
+	basic404content = "<h1>Not Found</h1>"
+
+	basic500content :: String
+	basic500content = "<h1>Internal Server Error</h1>"
+
+	basic404 :: View
+	basic404 = (ViewIO (HttpReturnCode 404) "text/html" Nothing [] (readFile "templates/error404.html"))
+
+	basic500 :: View
+	basic500 = (ViewIO (HttpReturnCode 500) "text/html" Nothing [] (readFile "templates/error500.html"))
+
+	basic404bs :: View
+	basic404bs = (ViewIOBS (HttpReturnCode 404) "text/html" Nothing [] (BS.readFile "templates/error404.html"))
+
+	basic500bs :: View
+	basic500bs = (ViewIOBS (HttpReturnCode 500) "text/html" Nothing [] (BS.readFile "templates/error500.html"))
 
 	basicView :: String -> View 
 	basicView content = View (HttpReturnCode 200) "text/html" Nothing [] content
 
 	basicViewIO :: IO String -> View 
 	basicViewIO content = ViewIO (HttpReturnCode 200) "text/html" Nothing [] content
+
+	basicViewBS :: BS.ByteString -> View 
+	basicViewBS content = ViewBS (HttpReturnCode 200) "text/html" Nothing [] content
+
+	basicViewIOBS :: IO BS.ByteString -> View 
+	basicViewIOBS content = ViewIOBS (HttpReturnCode 200) "text/html" Nothing [] content
 
 	readGet :: String -> ViewParam -> String
 	readGet search params = 
@@ -250,7 +316,8 @@ module Server (	runServer,
 		else
 			""
 		where
-			found = [snd param | param <- (uriQuery $ paramUri params), fst param == search] 
+			found = [snd param | param <- (uriQuery $ paramUri params), fst param == search]
+
 	readPost :: String -> ViewParam -> String
 	readPost search params = 
 		if length found > 0 then
@@ -288,3 +355,11 @@ module Server (	runServer,
  																					"Content-type: " ++ contenttype ++ (if (length additionnalheaders) > 0 then "\n" else "")++
  																					(join "\n" [fst a ++ ": " ++ snd a| a <- additionnalheaders]) ++ "\n\n" ++
  																						content
+
+ 	mkResponse :: HttpReturnCode -> String -> Maybe String -> [(String,String)] -> String
+	mkResponse returncode contenttype expires additionnalheaders = ("HTTP/1.0 " ++ show returncode ++ "\n" ++
+																		"Server: Flaskell" ++ "\n" ++
+																		"Transfer-Encoding: chuncked" ++ "\n" ++
+ 																		"Connection: keep-alive" ++ "\n" ++
+ 																		"Content-type: " ++ contenttype ++ (if (length additionnalheaders) > 0 then "\n" else "")++
+ 																		(join "\n" [fst a ++ ": " ++ snd a| a <- additionnalheaders]) ++ "\n\n")

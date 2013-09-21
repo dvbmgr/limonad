@@ -12,15 +12,26 @@ a.nostyle {
 }
 body {
 	font-family: "Helvetica Neue";
-	background-color: #ededed;
+	background-color: #EFEFDF;
+	color: #575B55;
 }
 body > header {
-	background-color: #4e4e4e;
+	background-color: #83C437;
 	color: #fff;
-	padding:  25px 40px  2px 40px;
+	padding:  25px 0px  2px 0px;
 }
 body > header > div#name > h1 {
+	padding: 80px 80px 10px 80px;
 	margin-bottom: 5px;
+	color: #D0D8CB;
+	font-size: 250%;
+}
+body > header > div#name > h1 > a {
+	border-bottom: none;
+}
+body > header > div#name > h1 > a > span {
+	border-bottom: solid 2px #F0F4A6;
+	color: #F0F4A6;
 }
 body > div#wrapper {
 	padding: 50px 80px 30px 80px;
@@ -34,29 +45,39 @@ body > div#wrapper > nav > ul > li {
 	vertical-align: bottom;
 	margin-bottom: 0px;
 	padding: 3px 7px;
-	background-color: #fff;
+	color: #575B55;
 }
 body > div#wrapper > nav > ul > li.current {
 	padding: 5px 10px;
 	font-size: 120%;
-	background-color: #4e4e4e;
+	border-radius: 2px 2px 0px 0px;
+	background-color: #575B55;
 	color: #fff;
 }
 body > div#wrapper > nav + table, body > div#wrapper > nav + section {
 	width: 100%;
-	padding: 10px;
-	border-top: solid 4px #4e4e4e;
-	border-bottom: solid 4px #4e4e4e;
+	padding: 10px 0px;
+
+	border-radius: 5px;
+	border: solid 1px #575B55;
+	padding: 15px;
 	font-size: 90%;
 }
-body > div#wrapper > nav + table thead tr {
-	background-color: #AAAAAA;
+body > div#wrapper > nav + section ul {
+	padding: 0;
 }
-
+body > div#wrapper > nav + section ul li {
+	padding: 10px 0px 10px 15px;
+	list-style-type: none;
+}
 body > div#wrapper > nav + table thead tr th {
 	text-align: left;
-	padding: 5px;
+	color: #AEAEAE;
+	text-transform: lowercase;
 }
-body > div#wrapper > nav + table tbody tr:nth-child(2n) {
+body > div#wrapper > nav + table thead tr th, body > div#wrapper > nav + table tbody tr td {
+	padding: 10px 0px 10px 15px;
+}
+body > div#wrapper > nav + table tbody tr:nth-child(2n), body > div#wrapper > nav + section ul li:nth-child(2n+1) {
 	background-color: #e4e4e4;
 }

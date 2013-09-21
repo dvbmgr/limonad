@@ -2,7 +2,7 @@
 <html>
 	<head>
 		!(templates/head.html)
-		<title>limonad :: {{ repo }} :: Commit #{{ cid }}</title>
+		<title>limonad :: {{ repo }} :: Commit #{{ id }}</title>
 		<script src="//cdn.jsdelivr.net/codemirror/3.14.0/codemirror.js"></script>
 		<link rel="stylesheet" href="//cdn.jsdelivr.net/codemirror/3.14.0/codemirror.css" />
 		<link rel="stylesheet" href="/codemirror/monokai.css" />
@@ -10,7 +10,7 @@
 	</head>
 	<body>
 		<header>
-			!(templates/menu.html)
+			!(templates/title.html)
 		</header>
 		<div id="wrapper">
 			<nav>
@@ -24,6 +24,13 @@
 				</ul>
 			</nav>
 			<section>
+				<h3>Informations</h3>
+				<p>Authored by <cite>{{ author }}</cite>, <time>{{ age }}</time>.</p>	
+				<h3>Commit message</h3>
+				<blockquote>
+					<p>{{ message }}</p>
+				</blockquote>
+				<h3>Diff</h3>
 				<pre id="diff_content">{{ diff }}</pre>
 			</section>
 		</div>
@@ -33,7 +40,8 @@
 			var editor = CodeMirror(function(node){ce.parentNode.replaceChild(node, ce);}, {
 	  			value: text,
 	  			readOnly: true,
-	  			theme: "monokai"
+	  			mode:"diff",
+	  			theme:"monokai"
 			});
 		</script>
 	</body>

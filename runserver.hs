@@ -29,9 +29,11 @@ import DarcsAPI
 import GHC.IO.Handle
 import System.IO
 import Server
+import Mime
 import Templates
 import System.Process
 import System.Directory
+import System.Posix.Files
 
 import Data.String.Utils
 import System.IO.Unsafe (unsafePerformIO)
@@ -45,6 +47,9 @@ import Data.Functor ((<$>))
 import Text.Markdown
 import Text.Blaze.Html.Renderer.Text
 import qualified Data.Text.Lazy as T
+import qualified Data.ByteString.Lazy as BS
+
+import Data.MIME.Types
 
 -------------------------
 -- Configuration       --
@@ -74,6 +79,10 @@ gr slug = if length nv == 1 then
 renderMarkdown :: String -> String
 renderMarkdown = replace "'" "&rsquo;" . replace "..." "&hellip;" . replace "--" "&ndash;" . replace "---" "&mdash;" . T.unpack . renderHtml . markdown def . T.pack
 
+toParams :: (String, String, String, String, String, String, String, String, String) -> [(String, String)]
+toParams (id_, cname, message, author, date, age, log_, files, lines_) = [("id",id_),("cname", cname), ("message", message), ("author", author), ("date", date), ("age", age), ("log", log_), ("files", files), ("lines", lines_)] 
+
+
 -------------------------
 -- Pages               --
 -------------------------
@@ -93,11 +102,10 @@ getReadMe :: ViewParam -> View
 getReadMe params = basicViewIO (do
 		matching <- (globDir1 (compile "README*") (rn name))
 		readm <- readFile $ if length matching > 0 then head matching else "static/noreadme.md"
-		fl <- renderFile [("readme", readm),
+		fl <- renderFile [("readme", renderMarkdown readm),
 								  		("slug", readGet "n" params), ("repo", name)] [] "templates/readme.html"
 		return fl)
 	where
-		matching = unsafePerformIO $ (globDir1 (compile "README*") (rn name))
 		name = gr $ readGet "n" params
 
 getLog :: ViewParam -> View
@@ -109,34 +117,53 @@ getLog params = basicViewIO (do
 									(map (toParams) $ reverse changes)
 								)] "templates/log.html"
 		return fl)
-	where
-		toParams :: (String, String, String, String, String, String, String, String) -> [(String, String)]
-		toParams (id_, cname, message, author, date, log_, files, lines_) = [("id",id_),("cname", cname), ("message", message), ("author", author), ("date", date), ("log", log_), ("files", files), ("lines", lines_)] 
-
 
 getCommit :: ViewParam -> View
 getCommit params = basicViewIO (do
-	cur <- getCurrentDirectory
-	setCurrentDirectory $ rn $ gr $ readGet "n" params
-	pr <- readProcess "darcs" ["diff","--index="++(readGet "h" params)] []
-	setCurrentDirectory cur
-	fl <- renderFile [("slug", 
+	pr <- getDiff (rn $ gr $ readGet "n" params) (readGet "h" params)
+	csdetails <- getChanges (rn $ gr $ readGet "n" params)
+	fl <- renderFile ([("slug", 
 						readGet "n" params), ("repo", gr $ readGet "n" params),
-					  ("diff", unlines $ drop 2 $ lines pr),
-					  ("cid", readGet "h" params)
-					] [] "templates/commit.html"
+					  ("diff", unlines $ drop 2 $ lines pr)
+					]++(toParams $ head $ filter (\(a,_,_,_,_,_,_,_,_) -> (a == readGet "h" params)) csdetails)) [] "templates/commit.html"
 	return fl)
 
-{- TODO -}
+getTree :: ViewParam -> View
+getTree params = basicViewIO (do
+		let path = ((rn $ gr $ readGet "n" params) ++ "/" ++ readGet "p" params)
+		fs <- getFileStatus path
+		fl <- (if isDirectory fs then do
+					dl <- (getDirectoryContents path)
+					fl <- renderFile [("slug", readGet "n" params), ("repo", gr $ readGet "n" params)] [("files", (map (\a -> [("name", a)]) $ filter (\a -> a /= "_darcs" && a !! 0 /= '.') dl))] "templates/tree.html"
+					return fl
+				else do
+					ct <- readFile path
+					fl <- renderFile [("slug", readGet "n" params), ("repo", gr $ readGet "n" params), ("file", ct), ("mime", searchFor path)] [] "templates/file.html" 
+					return fl)
+		return fl
+	)
+
+getDownloadFile :: ViewParam -> View
+getDownloadFile params = ViewIOBS (HttpReturnCode 200) (searchFor $ readGet "f" params) Nothing [] (do 
+		fil <- BS.readFile $ (rn $ gr $ readGet "n" params) ++ "/" ++ (replace ".." "." $ replace "//" "/" $ readGet "f" params)
+		return fil
+	)
+
 getTarBall :: ViewParam -> View
-getTarBall params = ViewIO (HttpReturnCode 200) "application/x-tar" Nothing [] (mkTarBall repos_path (gr $ readGet "n" params) >>= readFile)
-{- /TODO -}
+getTarBall params = ViewIOBS (HttpReturnCode 200) "application/x-tar" Nothing [("Content-Disposition","attachment; filename=\""++(gr $ readGet "n" params)++".tar.gz\"")] (do
+		cur <- getCurrentDirectory
+		setCurrentDirectory $ rn $ gr $ readGet "n" params
+		_ <- readProcessWithExitCode "darcs" ["dist"] []
+		setCurrentDirectory cur
+		fil <- BS.readFile $ (rn $ gr $ readGet "n" params) ++ "/" ++ (gr $ readGet "n" params) ++ ".tar.gz"
+		return fil
+	)
 
 -------------------------
 -- Assets              --
 -------------------------
 getStatic :: String -> ViewParam -> View
-getStatic file _ = ViewIO (HttpReturnCode 200) "text/css" Nothing [] (readFile file)
+getStatic file _ = ViewIOBS (HttpReturnCode 200) "text/css" Nothing [] (BS.readFile file)
 
 getAbout :: ViewParam -> View
 getAbout _ = renderFileToView [] [] "templates/about.html"
@@ -144,21 +171,26 @@ getAbout _ = renderFileToView [] [] "templates/about.html"
 redirectCode :: ViewParam -> View
 redirectCode _ = redirectPermanently "http://github.com/davbaumgartner/DarcsUI"
 
-
 -------------------------
 -- Server              --
 -------------------------
 main :: IO ()
-main = runServer 8080 ([	-- Pages
+main = do
+	codeMirrorLanguages <- getDirectoryContents "static/codemirror/"
+	runServer 8080 ([	-- Pages
 						Route "GET" "/" getDirectoryList,
 						Route "GET" "/readme/" getReadMe,
 						Route "GET" "/log/" getLog,
 						Route "GET" "/commit/" getCommit,
+						Route "GET" "/tree/" getTree,
+						Route "GET" "/download/" getDownloadFile,
 						Route "GET" "/tar/" getTarBall,
 							-- CodeMirror
-						Route "GET" "/codemirror/diff.js" (getStatic "static/code.diff.js"),
-						Route "GET" "/codemirror/monokai.css" (getStatic "static/theme.monokai.css"),
+						Route "GET" "/codemirror/monokai.css" (getStatic "static/codemirror/theme.monokai.css"),
 							-- Assets
 						Route "GET" "/limonad.css" (getStatic "static/main.css"),
 						Route "GET" "/about" getAbout,
-						Route "GET" "/code" redirectCode])
+						Route "GET" "/code" redirectCode]++
+							-- CodeMirror
+						map (\a -> Route "GET" ("/codemirror/" ++ (join "." $ drop 1 $ split "." a)) (getStatic ("static/codemirror/" ++ a))) (filter (startswith "code.") codeMirrorLanguages)
+						)

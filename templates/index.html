@@ -6,7 +6,7 @@
 	</head>
 	<body>
 		<header>
-			!(templates/menu.html)
+			!(templates/title.html)
 		</header>
 		<div id="wrapper">
 			<nav>
@@ -30,7 +30,7 @@
 					<tbody>
 						[[ repositories as repository ]]((
 						<tr>
-							<td><a href="/repo/?n={{ repository.slug }}">{{ repository.name }}</a></td>
+							<td><a href="/readme/?n={{ repository.slug }}">{{ repository.name }}</a></td>
 							<td>{{ repository.desc }}</td>
 							<td>{{ repository.author }}</td>
 							<td>{{ repository.commits }}</td>

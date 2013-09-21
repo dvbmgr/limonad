@@ -6,7 +6,7 @@
 	</head>
 	<body>
 		<header>
-			!(templates/menu.html)
+			!(templates/title.html)
 		</header>
 		<div id="wrapper">
 			<nav>
@@ -34,7 +34,7 @@
 					<tr>
 						<td><a href="/commit/?n={{ slug }}&amp;h={{ commit.id }}">{{ commit.message }}</a></td>
 						<td>{{ commit.author }}</td>
-						<td>{{ commit.date }}</td>
+						<td>{{ commit.date }} ({{ commit.age }})</td>
 						<td>{{ commit.files }}</td>
 						<td>{{ commit.lines }}</td>
 					</tr>

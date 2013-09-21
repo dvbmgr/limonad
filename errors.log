@@ -1,0 +1,128 @@
+
+Server.hs:48:9:
+    Warning: The import of `Data.Time' is redundant
+               except perhaps to import instances from `Data.Time'
+             To import instances alone, use: import Data.Time()
+
+Server.hs:57:9:
+    Warning: The import of `System.Directory' is redundant
+               except perhaps to import instances from `System.Directory'
+             To import instances alone, use: import System.Directory()
+
+Server.hs:63:25: Warning: Defined but not used: `uriUser'
+
+Server.hs:64:25: Warning: Defined but not used: `uriPassword'
+
+Server.hs:283:9: Warning: Defined but not used: `basic404content'
+
+Server.hs:286:9: Warning: Defined but not used: `basic500content'
+
+Server.hs:295:9: Warning: Defined but not used: `basic404bs'
+
+Server.hs:298:9: Warning: Defined but not used: `basic500bs'
+
+Server.hs:307:9: Warning: Defined but not used: `basicViewBS'
+
+Server.hs:331:23: Warning: Defined but not used: `xp'
+
+Server.hs:351:47: Warning: Defined but not used: `expires'
+
+Server.hs:360:43: Warning: Defined but not used: `expires'
+
+Templates.hs:37:9:
+    Warning: The import of `System.Environment' is redundant
+               except perhaps to import instances from `System.Environment'
+             To import instances alone, use: import System.Environment()
+
+Templates.hs:38:9:
+    Warning: The import of `Control.Monad' is redundant
+               except perhaps to import instances from `Control.Monad'
+             To import instances alone, use: import Control.Monad()
+
+Templates.hs:100:41: Warning: Defined but not used: `newstring'
+
+Templates.hs:118:26: Warning: Defined but not used: `lvars'
+
+Templates.hs:118:32: Warning: Defined but not used: `dvars'
+
+Templates.hs:119:36: Warning: Defined but not used: `dvars'
+
+Templates.hs:126:29: Warning: Defined but not used: `lvars'
+
+Templates.hs:126:35: Warning: Defined but not used: `dvars'
+
+DarcsAPI.hs:45:9:
+    Warning: The import of `System.Directory' is redundant
+               except perhaps to import instances from `System.Directory'
+             To import instances alone, use: import System.Directory()
+
+DarcsAPI.hs:47:9:
+    Warning: The import of `Control.Exception' is redundant
+               except perhaps to import instances from `Control.Exception'
+             To import instances alone, use: import Control.Exception()
+
+DarcsAPI.hs:49:9:
+    Warning: The import of `System.IO.Error' is redundant
+               except perhaps to import instances from `System.IO.Error'
+             To import instances alone, use: import System.IO.Error()
+
+DarcsAPI.hs:53:23: Warning: Defined but not used: `xp'
+
+DarcsAPI.hs:83:68:
+    Warning: This binding for `repository' shadows the existing binding
+               bound at DarcsAPI.hs:82:17
+
+DarcsAPI.hs:92:68:
+    Warning: This binding for `repository' shadows the existing binding
+               bound at DarcsAPI.hs:91:23
+
+DarcsAPI.hs:97:68:
+    Warning: This binding for `repository' shadows the existing binding
+               bound at DarcsAPI.hs:96:20
+
+runserver.hs:27:1:
+    Warning: The import of `Darcs.Commands' is redundant
+               except perhaps to import instances from `Darcs.Commands'
+             To import instances alone, use: import Darcs.Commands()
+
+runserver.hs:29:1:
+    Warning: The import of `GHC.IO.Handle' is redundant
+               except perhaps to import instances from `GHC.IO.Handle'
+             To import instances alone, use: import GHC.IO.Handle()
+
+runserver.hs:30:1:
+    Warning: The import of `System.IO' is redundant
+               except perhaps to import instances from `System.IO'
+             To import instances alone, use: import System.IO()
+
+runserver.hs:40:1:
+    Warning: The import of `Control.Monad' is redundant
+               except perhaps to import instances from `Control.Monad'
+             To import instances alone, use: import Control.Monad()
+
+runserver.hs:41:1:
+    Warning: The import of `Data.Conduit.List' is redundant
+               except perhaps to import instances from `Data.Conduit.List'
+             To import instances alone, use: import Data.Conduit.List()
+
+runserver.hs:42:1:
+    Warning: The import of `System.Time' is redundant
+               except perhaps to import instances from `System.Time'
+             To import instances alone, use: import System.Time()
+
+runserver.hs:44:1:
+    Warning: The import of `System.Locale' is redundant
+               except perhaps to import instances from `System.Locale'
+             To import instances alone, use: import System.Locale()
+
+runserver.hs:45:1:
+    Warning: The import of `Data.Functor' is redundant
+               except perhaps to import instances from `Data.Functor'
+             To import instances alone, use: import Data.Functor()
+
+runserver.hs:52:1:
+    Warning: The import of `Data.MIME.Types' is redundant
+               except perhaps to import instances from `Data.MIME.Types'
+             To import instances alone, use: import Data.MIME.Types()
+
+runserver.hs:90:18: Warning: Defined but not used: `params'

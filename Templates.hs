@@ -105,8 +105,8 @@ module Templates (	renderString,
 					parseLocal' :: [(String, String)] -> String -> String
 					parseLocal' [] str = 
 						str
-					parseLocal' (cvar:ovar) str = 
-						parseLocal' ovar (SUtils.replace (mkname cvar) (snd cvar) str)
+					parseLocal' (csvar:ovar) str = 
+						parseLocal' ovar (SUtils.replace (mkname csvar) (snd csvar) str)
 			cvar :: [[(String, String)]]
 			cvar = 
 				if length match > 0 then
@@ -127,7 +127,7 @@ module Templates (	renderString,
 
 	-- Read an parse from string
 	renderString :: LocalVars -> DBVars -> String -> String
-	renderString lvars dvars string = readExpr lvars dvars string
+	renderString lvars dvars str = readExpr lvars dvars str
 
 	-- Read an parse from file
 	renderFile :: LocalVars -> DBVars -> String -> IO String
@@ -139,7 +139,8 @@ module Templates (	renderString,
 	renderFileToView lvars dvars fname = basicViewIO (renderFile lvars dvars fname)
 
 	renderStringToView :: LocalVars -> DBVars -> String -> View 
-	renderStringToView lvars dvars string = basicView (renderString lvars dvars string)
+	renderStringToView lvars dvars str =
+		basicView (renderString lvars dvars str)
 
 	basePage :: [String] -> [String] -> String -> String -> String
 	basePage csss jss title content = 

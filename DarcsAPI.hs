@@ -29,7 +29,7 @@ module DarcsAPI (	showTags,
 					showAge,
 					showCommitNth,
 					getChanges,
-					mkTarBall ) where
+					getDiff ) where
 
 	import Prelude hiding (catch)
 	import Darcs.Repository ( readRepo, withRepositoryDirectory, RepoJob(..) )
@@ -40,20 +40,13 @@ module DarcsAPI (	showTags,
 	import System.Locale
 	import System.Directory
 	import Darcs.Patch.PatchInfoAnd
-	import Data.String.Utils (split, join)
+	import Data.String.Utils (split, strip, join)
 	import Data.List
-	import qualified Codec.Archive.Tar as Tar
 	import System.Directory
+	import System.Process
 	import Control.Exception
+	import System.Exit
 	import System.IO.Error hiding (catch)
-
-	removeFileIfExists :: FilePath -> IO ()
-	removeFileIfExists fileName = 
-		removeFile fileName `catch` handleExists
-		where 
-			handleExists e
-				| (isDoesNotExistError e) = return ()
-				| otherwise = throwIO e
 
 	stripNothings :: [Maybe String] -> [String] -> [String]
 	stripNothings [] xs = xs
@@ -65,22 +58,23 @@ module DarcsAPI (	showTags,
 
 	showTags :: String -> IO String
 	showTags repository =
-		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
-			patches <- readRepo repository
-			return $ join ", " (nub $ stripNothings (mapRL (piTag . info) (newset2RL patches)) [])
+		withRepositoryDirectory [] repository $ RepoJob $ \repo -> do
+			patches <- readRepo repo
+			return $ join ", " $ map strip $ nub $ stripNothings (mapRL (piTag . info) (newset2RL patches)) []
 
+	formatTime :: [Char] -> [Char]
 	formatTime ftime
 			| btime <= 0 = "just now"
 			| btime <= 1 = "a second"
-			| btime <= 59 = (show $ round btime) ++ " seconds"
+			| btime <= 59 = show (round btime :: Int) ++ " seconds"
 			| btime <= 119 = "a minute"
-			| btime <= 3540 = (show $ round (btime/60)) ++ " minutes"
+			| btime <= 3540 = show (round (btime/60) :: Int) ++ " minutes"
 			| btime <= 7100 = "an hour"
-			| btime <= 82800 = (show $ round ((btime+99)/3600)) ++ " hours"
+			| btime <= 82800 = show (round ((btime+99)/3600) :: Int) ++ " hours"
 			| btime <= 172000 = "a day"
-			| btime <= 518400 = (show $ round ((btime+800)/(60*60*24))) ++ " days"
+			| btime <= 518400 = show (round ((btime+800)/(60*60*24)) :: Int) ++ " days"
 			| btime <= 1036800 = "a week"
-			| otherwise = (show $ round ((btime+180000)/(60*60*24*7))) ++ " weeks"
+			| otherwise = show (round ((btime+180000)/(60*60*24*7)) :: Int) ++ " weeks"
 		where 
 			btime = read (head (split " " ftime)) :: Float
 
@@ -102,40 +96,53 @@ module DarcsAPI (	showTags,
 	showAuthor repository =
 		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
 			patches <- readRepo repository
-			return $ join ", " (nub (mapRL (piAuthor . info) (newset2RL patches)))
+			return $ join ", " $ map strip $ nub $ mapRL (piAuthor . info) (newset2RL patches)
 
 
-	getChanges :: String -> IO [(String, String, String, String, String, String, String, String)]
-	getChanges repository = 
-		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
+	getDiff :: String -> String -> IO String
+	getDiff repo id_ = do
+		cur <- getCurrentDirectory
+		setCurrentDirectory repo
+		pr <- readProcessWithExitCode "darcs" ["diff","--index="++id_] []
+		setCurrentDirectory cur
+		return (case pr of 
+			(ExitFailure _,_,_) -> "Error generating diff."
+			(ExitSuccess, stdout, _) -> stdout)
+
+	getChanges :: String -> IO [(String, String, String, String, String, String, String, String, String)]
+	getChanges rn = 
+		withRepositoryDirectory [] rn $ RepoJob $ \repository -> do
 			patches <- readRepo repository
 			clock <- getClockTime
 			let commits = (mapRL (mkInfo clock . info) (newset2RL patches))
-			return $ map addDiff $ addCommitId 1 commits []
+			diffs <- sequence $ map (addDiff rn) $ addCommitId 1 commits []
+			return diffs
 		where
-			mkInfo :: ClockTime -> PatchInfo -> (String, String, String, String, String)
+			mkInfo :: ClockTime -> PatchInfo -> (String, String, String, String, String, String)
 			mkInfo clock infos = (makeAltFilename infos,
 								piName infos, 
 								piAuthor infos, 
-								(formatCalendarTime defaultTimeLocale "%d/%m/%Y %H:%I" $ piDate infos) ++ " (" ++ (formatTime $ timeDiffToString $ (diffClockTimes clock (toClockTime $ piDate infos))) ++ " ago)",
+								(formatCalendarTime defaultTimeLocale "%d/%m/%Y %H:%I" $ piDate infos),
+								(formatTime $ timeDiffToString $ (diffClockTimes clock (toClockTime $ piDate infos))) ++ " ago",
 								join ", " $ piLog infos)
 
-	addCommitId :: Int -> [(String, String, String, String, String)] -> [(String, String, String, String, String, String)] -> [(String, String, String, String, String, String)]
+	addCommitId :: Int -> [(String, String, String, String, String, String)] -> [(String, String, String, String, String, String, String)] -> [(String, String, String, String, String, String, String)]
 	addCommitId _ [] out = out
-	addCommitId x ((a1, a2, a3, a4, a5):es) out = 
-		addCommitId (x+1) es ((show x, a1, a2, a3, a4, a5):out)
+	addCommitId x ((a1, a2, a3, a4, a5, a6):es) out = 
+		addCommitId (x+1) es ((show x, a1, a2, a3, a4, a5, a6):out)
 
-	addDiff :: (String, String, String, String, String, String) -> (String, String, String, String, String, String, String, String)
-	addDiff (a1, a2, a3, a4, a5, a6) = 
-		(a1, a2, a3, a4, a5, a6, "-", "-")
-
-	{- TODO -}
-	mkTarBall :: String -> String -> IO String 
-	mkTarBall repo_path path = do
-					removeFileIfExists tpath
-					directory_contents <- getDirectoryContents (repo_path ++ "/" ++ path)
-					Tar.create tpath (repo_path ++ "/" ++ path) $ filter (\a -> ((a !! 0) /= '.')) directory_contents
-					return tpath
-			where
-				tpath = path ++ ".tar"
-	{- /TODO -}
+	addDiff :: String -> (String, String, String, String, String, String, String) -> IO (String, String, String, String, String, String, String, String, String)
+	addDiff r (a1, a2, a3, a4, a5, a6, a7) = 
+		do
+			pr <- getDiff r a1
+			return (a1, 
+						a2, 
+						a3, 
+						a4, 
+						a5, 
+						a6, 
+						a7, 
+						show $ (length (split "diff -rN -u old-" pr)) - 1, 
+						"+"++(show $ nsw '+' pr) ++ "/-" ++ (show $ nsw '-' pr))
+		where 
+			nsw s c = length $ filter (\a -> a !! 0 == s && take 3 a /= [s,s,s]) $ lines c
