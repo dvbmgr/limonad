@@ -134,7 +134,7 @@ getTree params = basicViewIO (do
 		fs <- getFileStatus path
 		fl <- (if isDirectory fs then do
 					dl <- (getDirectoryContents path)
-					fl <- renderFile [("slug", readGet "n" params), ("repo", gr $ readGet "n" params)] [("files", (map (\a -> [("name", a)]) $ filter (\a -> a /= "_darcs" && a !! 0 /= '.') dl))] "templates/tree.html"
+					fl <- renderFile [("slug", readGet "n" params), ("repo", gr $ readGet "n" params)] [("files", (map (\a -> [("name", a), ("file", (readGet "p" params)++"/"++a)]) $ filter (\a -> a /= "_darcs" && a !! 0 /= '.') dl))] "templates/tree.html"
 					return fl
 				else do
 					ct <- readFile path

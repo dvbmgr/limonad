@@ -78,6 +78,6 @@ body > div#wrapper > nav + table thead tr th {
 body > div#wrapper > nav + table thead tr th, body > div#wrapper > nav + table tbody tr td {
 	padding: 10px 0px 10px 15px;
 }
-body > div#wrapper > nav + table tbody tr:nth-child(2n), body > div#wrapper > nav + section ul li:nth-child(2n+1) {
+body > div#wrapper > nav + table tbody tr:nth-child(2n+1), body > div#wrapper > nav + section ul li:nth-child(2n+1) {
 	background-color: #e4e4e4;
 }
