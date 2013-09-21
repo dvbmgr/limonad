@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+	<head>
+		!(templates/head.html)
+		<title>limonad :: {{ repo }} :: Commit #{{ cid }}</title>
+		<script src="//cdn.jsdelivr.net/codemirror/3.14.0/codemirror.js"></script>
+		<link rel="stylesheet" href="//cdn.jsdelivr.net/codemirror/3.14.0/codemirror.css" />
+		<link rel="stylesheet" href="/codemirror/monokai.css" />
+		<script src="/codemirror/diff.js"></script>
+	</head>
+	<body>
+		<header>
+			!(templates/menu.html)
+		</header>
+		<div id="wrapper">
+			<nav>
+				<ul id="heading">
+					<li><a href="/" class="nostyle">projects</a></li>
+					<li><a href="/readme/?n={{ slug }}" class="nostyle">readme</a></li>
+					<li><a href="/log/?n={{ slug }}" class="nostyle">log</a></li>
+					<li class="current"><a href="/commit/?n={{ slug }}&amp;h=1" class="nostyle">commit</a></li>
+					<li><a href="/tree/?n={{ slug }}" class="nostyle">tree</a></li>
+					<li><a href="/tar/?n={{ slug }}" class="nostyle">download</a></li>
+				</ul>
+			</nav>
+			<section>
+				<pre id="diff_content">{{ diff }}</pre>
+			</section>
+		</div>
+		<script type="text/javascript">
+			var ce = document.getElementById("diff_content");
+			var text = ce.textContent || ce.innerText;
+			var editor = CodeMirror(function(node){ce.parentNode.replaceChild(node, ce);}, {
+	  			value: text,
+	  			readOnly: true,
+	  			theme: "monokai"
+			});
+		</script>
+	</body>
+</html>

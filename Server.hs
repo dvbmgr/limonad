@@ -153,7 +153,7 @@ module Server (	runServer,
 		show _ = show (HttpReturnCode 500)
 
 	to_tuple :: [a] -> (a,a)
-	to_tuple (b:c:d) = (b,c)
+	to_tuple (b:c:_) = (b,c)
 
 	runServer :: PortNumber -> Routes -> IO ()
 	runServer port routes = do
@@ -286,6 +286,5 @@ module Server (	runServer,
 																					"Transfer-Encoding: chuncked" ++ "\n" ++
  																					"Connection: keep-alive" ++ "\n" ++
  																					"Content-type: " ++ contenttype ++ (if (length additionnalheaders) > 0 then "\n" else "")++
- 																					(join "\n" [fst a ++ ": " ++ snd a| a <- additionnalheaders]) ++ "\n" ++
-																					"Content-length: " ++ show (length content) ++ "\n\n" ++
+ 																					(join "\n" [fst a ++ ": " ++ snd a| a <- additionnalheaders]) ++ "\n\n" ++
  																						content

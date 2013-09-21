@@ -30,7 +30,10 @@ import GHC.IO.Handle
 import System.IO
 import Server
 import Templates
+import System.Process
 import System.Directory
+
+import Data.String.Utils
 import System.IO.Unsafe (unsafePerformIO)
 import Control.Monad hiding (join)
 import qualified Data.Conduit.List
@@ -38,6 +41,10 @@ import System.Time
 import System.FilePath.Glob
 import System.Locale (defaultTimeLocale)
 import Data.Functor ((<$>))
+
+import Text.Markdown
+import Text.Blaze.Html.Renderer.Text
+import qualified Data.Text.Lazy as T
 
 -------------------------
 -- Configuration       --
@@ -63,6 +70,10 @@ gr slug = if length nv == 1 then
 		matching b = [fst a | a <- b, snd a == slug] 
 		nv = matching $ map (\a -> (a, slugifyString a)) (unsafePerformIO $ getDirectoryContents repos_path)
 
+
+renderMarkdown :: String -> String
+renderMarkdown = replace "'" "&rsquo;" . replace "..." "&hellip;" . replace "--" "&ndash;" . replace "---" "&mdash;" . T.unpack . renderHtml . markdown def . T.pack
+
 -------------------------
 -- Pages               --
 -------------------------
@@ -79,24 +90,42 @@ getDirectoryList params = basicViewIO (getDirectoryContents repos_path >>= \repo
 						]) . filter (\a -> ((a !! 0) /= '.'))
 
 getReadMe :: ViewParam -> View
-getReadMe params = renderFileToView [("readme", if length matching > 0 then unsafePerformIO $ (readFile $ head matching) else "This repository has no README. Create it in the root directory to be displayed here."),
-								  		("slug", readGet "n" params)] [] "templates/readme.html"
+getReadMe params = basicViewIO (do
+		matching <- (globDir1 (compile "README*") (rn name))
+		readm <- readFile $ if length matching > 0 then head matching else "static/noreadme.md"
+		fl <- renderFile [("readme", readm),
+								  		("slug", readGet "n" params), ("repo", name)] [] "templates/readme.html"
+		return fl)
 	where
-		matching = unsafePerformIO $ (globDir1 (compile "README*") (rn (gr $ readGet "n" params)))
+		matching = unsafePerformIO $ (globDir1 (compile "README*") (rn name))
+		name = gr $ readGet "n" params
 
 getLog :: ViewParam -> View
-getLog params = renderFileToView [("slug", 
-									readGet "n" params)
+getLog params = basicViewIO (do
+		changes <- getChanges (rn $ gr $ readGet "n" params)
+		fl <- renderFile [("slug", 
+									readGet "n" params), ("repo", gr $ readGet "n" params)
 								] [("commits", 
-									(map (toParams) $ reverse (unsafePerformIO $ getChanges (rn $ gr $ readGet "n" params)))
+									(map (toParams) $ reverse changes)
 								)] "templates/log.html"
+		return fl)
 	where
 		toParams :: (String, String, String, String, String, String, String, String) -> [(String, String)]
 		toParams (id_, cname, message, author, date, log_, files, lines_) = [("id",id_),("cname", cname), ("message", message), ("author", author), ("date", date), ("log", log_), ("files", files), ("lines", lines_)] 
 
 
 getCommit :: ViewParam -> View
-getCommit params = basicView ""
+getCommit params = basicViewIO (do
+	cur <- getCurrentDirectory
+	setCurrentDirectory $ rn $ gr $ readGet "n" params
+	pr <- readProcess "darcs" ["diff","--index="++(readGet "h" params)] []
+	setCurrentDirectory cur
+	fl <- renderFile [("slug", 
+						readGet "n" params), ("repo", gr $ readGet "n" params),
+					  ("diff", unlines $ drop 2 $ lines pr),
+					  ("cid", readGet "h" params)
+					] [] "templates/commit.html"
+	return fl)
 
 {- TODO -}
 getTarBall :: ViewParam -> View
@@ -106,8 +135,8 @@ getTarBall params = ViewIO (HttpReturnCode 200) "application/x-tar" Nothing [] (
 -------------------------
 -- Assets              --
 -------------------------
-getCSS :: ViewParam -> View
-getCSS _ = ViewIO (HttpReturnCode 200) "text/css" Nothing [] (readFile "static/main.css")
+getStatic :: String -> ViewParam -> View
+getStatic file _ = ViewIO (HttpReturnCode 200) "text/css" Nothing [] (readFile file)
 
 getAbout :: ViewParam -> View
 getAbout _ = renderFileToView [] [] "templates/about.html"
@@ -126,7 +155,10 @@ main = runServer 8080 ([	-- Pages
 						Route "GET" "/log/" getLog,
 						Route "GET" "/commit/" getCommit,
 						Route "GET" "/tar/" getTarBall,
+							-- CodeMirror
+						Route "GET" "/codemirror/diff.js" (getStatic "static/code.diff.js"),
+						Route "GET" "/codemirror/monokai.css" (getStatic "static/theme.monokai.css"),
 							-- Assets
-						Route "GET" "/main.css" getCSS,
+						Route "GET" "/limonad.css" (getStatic "static/main.css"),
 						Route "GET" "/about" getAbout,
 						Route "GET" "/code" redirectCode])

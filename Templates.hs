@@ -94,7 +94,7 @@ module Templates (	renderString,
 		where 
 			parseLocal :: [(String, String)] -> String
 			parseLocal var = 
-				parseLocal' var content
+				renderString lvars dvars $ parseLocal' var content
 				where
 					newstring :: String
 					newstring = 

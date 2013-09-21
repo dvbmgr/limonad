@@ -30,6 +30,7 @@ module DarcsAPI (	showTags,
 					showCommitNth,
 					getChanges,
 					mkTarBall ) where
+
 	import Prelude hiding (catch)
 	import Darcs.Repository ( readRepo, withRepositoryDirectory, RepoJob(..) )
 	import Darcs.Patch.Set
@@ -49,23 +50,24 @@ module DarcsAPI (	showTags,
 	removeFileIfExists :: FilePath -> IO ()
 	removeFileIfExists fileName = 
 		removeFile fileName `catch` handleExists
-		where handleExists e
-	        | isDoesNotExistError e = return ()
-	        | otherwise = throwIO e
+		where 
+			handleExists e
+				| (isDoesNotExistError e) = return ()
+				| otherwise = throwIO e
 
-	rmNothing :: [Maybe String] -> [String] -> [String]
-	rmNothing [] xs = xs
-	rmNothing xp@(x:xs) out = case x of
+	stripNothings :: [Maybe String] -> [String] -> [String]
+	stripNothings [] xs = xs
+	stripNothings xp@(x:xs) out = case x of
 		Just f ->
-			rmNothing xs (f:out)
+			stripNothings xs (f:out)
 		Nothing ->
-			rmNothing xs out
+			stripNothings xs out
 
 	showTags :: String -> IO String
 	showTags repository =
 		withRepositoryDirectory [] repository $ RepoJob $ \repository -> do
 			patches <- readRepo repository
-			return $ join ", " (nub $ rmNothing (mapRL (piTag . info) (newset2RL patches)) [])
+			return $ join ", " (nub $ stripNothings (mapRL (piTag . info) (newset2RL patches)) [])
 
 	formatTime ftime
 			| btime <= 0 = "just now"
@@ -109,19 +111,19 @@ module DarcsAPI (	showTags,
 			patches <- readRepo repository
 			clock <- getClockTime
 			let commits = (mapRL (mkInfo clock . info) (newset2RL patches))
-			return $ map addDiff $ addCommitId (length commits) commits []
+			return $ map addDiff $ addCommitId 1 commits []
 		where
 			mkInfo :: ClockTime -> PatchInfo -> (String, String, String, String, String)
 			mkInfo clock infos = (makeAltFilename infos,
 								piName infos, 
 								piAuthor infos, 
-								(formatCalendarTime defaultTimeLocale "%c" $ piDate infos) ++ " (" ++ (formatTime $ timeDiffToString $ (diffClockTimes clock (toClockTime $ piDate infos))) ++ " ago)",
+								(formatCalendarTime defaultTimeLocale "%d/%m/%Y %H:%I" $ piDate infos) ++ " (" ++ (formatTime $ timeDiffToString $ (diffClockTimes clock (toClockTime $ piDate infos))) ++ " ago)",
 								join ", " $ piLog infos)
 
 	addCommitId :: Int -> [(String, String, String, String, String)] -> [(String, String, String, String, String, String)] -> [(String, String, String, String, String, String)]
 	addCommitId _ [] out = out
 	addCommitId x ((a1, a2, a3, a4, a5):es) out = 
-		addCommitId (x-1) es ((show x, a1, a2, a3, a4, a5):out)
+		addCommitId (x+1) es ((show x, a1, a2, a3, a4, a5):out)
 
 	addDiff :: (String, String, String, String, String, String) -> (String, String, String, String, String, String, String, String)
 	addDiff (a1, a2, a3, a4, a5, a6) = 
