@@ -49,8 +49,6 @@ import Text.Blaze.Html.Renderer.Text
 import qualified Data.Text.Lazy as T
 import qualified Data.ByteString.Lazy as BS
 
-import Data.MIME.Types
-
 -------------------------
 -- Configuration       --
 -------------------------
