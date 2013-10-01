@@ -42,7 +42,7 @@ Copy the following content in `/etc/nginx/sites-enabled/limonad`.
 ```
 server {
 	listen 80;
-	server limonad.local;
+	server_name limonad.local;
 
 	location / {
 		proxy_pass http://localhost:8080;
