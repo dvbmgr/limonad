@@ -24,16 +24,18 @@
 -- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 -- SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import Config
+import Server
+import Mime
+import Templates
+
+import System.Process
+import System.Directory
+import System.Posix.Files
 import Darcs.Commands
 import DarcsAPI
 import GHC.IO.Handle
 import System.IO
-import Server
-import Mime
-import Templates
-import System.Process
-import System.Directory
-import System.Posix.Files
 
 import Data.String.Utils as SU
 import System.IO.Unsafe (unsafePerformIO)
@@ -48,13 +50,6 @@ import Text.Markdown
 import Text.Blaze.Html.Renderer.Text
 import qualified Data.Text.Lazy as T
 import qualified Data.ByteString.Lazy as BS
-
--------------------------
--- Configuration       --
--------------------------
--- Repository path
-repos_path :: String
-repos_path = "./repos"
 
 -------------------------
 -- Helpers             --
@@ -185,7 +180,7 @@ redirectCode _ = redirectPermanently "http://github.com/davbaumgartner/DarcsUI"
 main :: IO ()
 main = do
 	codeMirrorLanguages <- getDirectoryContents "static/codemirror/"
-	runServer 8080 ([	-- Pages
+	runServer port ([	-- Pages
 						Route "GET" "/" getDirectoryList,
 						Route "GET" "/readme/" getReadMe,
 						Route "GET" "/log/" getLog,
