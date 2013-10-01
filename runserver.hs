@@ -76,12 +76,12 @@ toParams :: (String, String, String, String, String, String, String, String, Str
 toParams (id_, cname, message, author, date, age, log_, files, lines_) = [("id",id_),("cname", cname), ("message", message), ("author", author), ("date", date), ("age", age), ("log", log_), ("files", files), ("lines", lines_)] 
 
 
-getDirectoryContentsWithIsDirectory :: String -> String -> IO [(String, Bool)]
-getDirectoryContentsWithIsDirectory r a = ((getDirectoryContents a) >>= \dc -> (mapM isDir (filter (\a -> a /= "_darcs" && a !! 0 /= '.') dc)))
+getDirectoryContentsWithIsDirectory :: String -> String -> String -> IO [(String, Bool)]
+getDirectoryContentsWithIsDirectory r p a = ((getDirectoryContents a) >>= \dc -> (mapM isDir (filter (\a -> a /= "_darcs" && a !! 0 /= '.') dc)))
 	where
 		isDir :: String -> IO (String, Bool)
 		isDir b = do
-			fs <- getFileStatus $ rn ((gr r) ++ "/" ++ b)
+			fs <- getFileStatus $ rn ((gr r) ++ "/" ++ p ++ "/" ++ b)
 			return (b, isDirectory fs)
 
 
@@ -136,7 +136,7 @@ getTree params = basicViewIO (do
 		let path = ((rn $ gr $ readGet "n" params) ++ "/" ++ readGet "p" params)
 		fs <- getFileStatus path
 		fl <- (if isDirectory fs then do
-					dl <- (getDirectoryContentsWithIsDirectory (readGet "n" params) path)
+					dl <- (getDirectoryContentsWithIsDirectory (readGet "n" params) (readGet "p" params) path)
 					fl <- renderFile [("slug", readGet "n" params), ("repo", gr $ readGet "n" params)] [("files", (map (\a -> [("name", fst a), ("file", (readGet "p" params)++"/"++(fst a)), ("after", if (snd a) then ("/") else (" (<a href=\"/download/?n={{ slug }}&f="++(readGet "p" params)++"/"++(fst a)++"\" title=\"If not responding, click here.\">download</a>)"))]) dl))] "templates/tree.html"
 					return fl
 				else do
