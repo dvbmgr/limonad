@@ -35,9 +35,9 @@ import System.Process
 import System.Directory
 import System.Posix.Files
 
-import Data.String.Utils
+import Data.String.Utils as SU
 import System.IO.Unsafe (unsafePerformIO)
-import Control.Monad hiding (join)
+import Control.Monad as M
 import qualified Data.Conduit.List
 import System.Time
 import System.FilePath.Glob
@@ -79,6 +79,16 @@ renderMarkdown = replace "'" "&rsquo;" . replace "..." "&hellip;" . replace "--"
 
 toParams :: (String, String, String, String, String, String, String, String, String) -> [(String, String)]
 toParams (id_, cname, message, author, date, age, log_, files, lines_) = [("id",id_),("cname", cname), ("message", message), ("author", author), ("date", date), ("age", age), ("log", log_), ("files", files), ("lines", lines_)] 
+
+
+getDirectoryContentsWithIsDirectory :: String -> String -> IO [(String, Bool)]
+getDirectoryContentsWithIsDirectory r a = ((getDirectoryContents a) >>= \dc -> (mapM isDir (filter (\a -> a /= "_darcs" && a !! 0 /= '.') dc)))
+	where
+		isDir :: String -> IO (String, Bool)
+		isDir b = do
+			fs <- getFileStatus $ rn ((gr r) ++ "/" ++ b)
+			return (b, isDirectory fs)
+
 
 
 -------------------------
@@ -131,8 +141,8 @@ getTree params = basicViewIO (do
 		let path = ((rn $ gr $ readGet "n" params) ++ "/" ++ readGet "p" params)
 		fs <- getFileStatus path
 		fl <- (if isDirectory fs then do
-					dl <- (getDirectoryContents path)
-					fl <- renderFile [("slug", readGet "n" params), ("repo", gr $ readGet "n" params)] [("files", (map (\a -> [("name", a), ("file", (readGet "p" params)++"/"++a)]) $ filter (\a -> a /= "_darcs" && a !! 0 /= '.') dl))] "templates/tree.html"
+					dl <- (getDirectoryContentsWithIsDirectory (readGet "n" params) path)
+					fl <- renderFile [("slug", readGet "n" params), ("repo", gr $ readGet "n" params)] [("files", (map (\a -> [("name", fst a), ("file", (readGet "p" params)++"/"++(fst a)), ("after", if (snd a) then ("/") else (" (<a href=\"/download/?n={{ slug }}&f="++(readGet "p" params)++"/"++(fst a)++"\" title=\"If not responding, click here.\">download</a>)"))]) dl))] "templates/tree.html"
 					return fl
 				else do
 					ct <- readFile path
@@ -190,5 +200,5 @@ main = do
 						Route "GET" "/about" getAbout,
 						Route "GET" "/code" redirectCode]++
 							-- CodeMirror
-						map (\a -> Route "GET" ("/codemirror/" ++ (join "." $ drop 1 $ split "." a)) (getStatic ("static/codemirror/" ++ a))) (filter (startswith "code.") codeMirrorLanguages)
+						map (\a -> Route "GET" ("/codemirror/" ++ (SU.join "." $ drop 1 $ split "." a)) (getStatic ("static/codemirror/" ++ a))) (filter (startswith "code.") codeMirrorLanguages)
 						)
