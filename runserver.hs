@@ -152,7 +152,7 @@ getTree params = basicViewIO (do
 	)
 
 getDownloadFile :: ViewParam -> View
-getDownloadFile params = ViewIOBS (HttpReturnCode 200) (searchFor $ readGet "f" params) Nothing [] (do 
+getDownloadFile params = ViewIOBS (HttpReturnCode 200) (searchFor $ readGet "f" params) Nothing [("Content-Disposition","attachment; filename=\""++(replace "/" "" $ readGet "f" params)++"\"")] (do 
 		fil <- BS.readFile $ (rn $ gr $ readGet "n" params) ++ "/" ++ (replace ".." "." $ replace "//" "/" $ readGet "f" params)
 		return fil
 	)
