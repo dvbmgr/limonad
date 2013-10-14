@@ -1,6 +1,4 @@
-limonad
-=======
-
+# limonad
 limonad is a web interface for Darcs
 
 License
