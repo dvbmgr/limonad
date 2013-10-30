@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Limonad : limonad is a web interface for Darcs" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Limonad</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/GeekSchmerzen/limonad">View on GitHub</a>
+
+          <h1 id="project_title">Limonad</h1>
+          <h2 id="project_tagline">limonad is a web interface for Darcs</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/GeekSchmerzen/limonad/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/GeekSchmerzen/limonad/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a name="limonad" class="anchor" href="#limonad"><span class="octicon octicon-link"></span></a>limonad</h1>
+
+<p>limonad is a web interface for Darcs</p>
+
+<h1>
+<a name="license" class="anchor" href="#license"><span class="octicon octicon-link"></span></a>License</h1>
+
+<p>Distributed under the BSD license. See LICENSE.</p>
+
+<h1>
+<a name="authors-" class="anchor" href="#authors-"><span class="octicon octicon-link"></span></a>Authors </h1>
+
+<p>David Baumgartner <a href="mailto:ch.davidbaumgartner@gmail.com">ch.davidbaumgartner@gmail.com</a></p>
+
+<h1>
+<a name="how-to-use" class="anchor" href="#how-to-use"><span class="octicon octicon-link"></span></a>How to use</h1>
+
+<h2>
+<a name="developpement" class="anchor" href="#developpement"><span class="octicon octicon-link"></span></a>Developpement</h2>
+
+<p>The simplest way to start <em>limonad</em> as a server is to type <code>make run</code>.</p>
+
+<p>This will make the server listen to 0.0.0.0:8080.</p>
+
+<h2>
+<a name="production" class="anchor" href="#production"><span class="octicon octicon-link"></span></a>Production</h2>
+
+<p>Firstly open a screen.</p>
+
+<pre><code>$ screen -R limonad
+
+# In the screen, type 
+make run
+</code></pre>
+
+<p>You can configure Nginx this way.</p>
+
+<p>Copy the following content in <code>/etc/nginx/sites-enabled/limonad</code>.</p>
+
+<pre><code>server {
+    listen 80;
+    server_name limonad.local;
+
+    location / {
+        proxy_pass http://localhost:8080;
+    }
+}
+</code></pre>
+
+<p>Apache version is quite similar. This requires <code>mod_proxy</code></p>
+
+<pre><code>Listen 80
+&lt;VirtualHost *:80&gt;
+    ServerName limonad.local
+    ProxyPass / http://localhost:8080/
+&lt;/VirtualHost&gt;
+</code></pre>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Limonad maintained by <a href="https://github.com/GeekSchmerzen">GeekSchmerzen</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
