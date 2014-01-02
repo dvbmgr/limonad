@@ -1,5 +1,0 @@
-*.hi
-*.o
-.gitignore
-limonad
-errors.log
